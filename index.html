@@ -83,6 +83,7 @@
 <body style="margin: 0; overflow: hidden;">
 
     <div id="start-screen">
+        <img src="https://raw.githubusercontent.com/EsseAcadem/theacademygame/668e6854f8df8913447aac80b8d5d5b403ed228d/shade_1.png" alt="Essentia Academy Logo" style="max-width: 220px; margin-bottom: 25px; border-radius: 10px;">
         <h1 style="margin-bottom: 10px;">EFM Day Game</h1>
         <p style="margin: 0 20px; opacity: 0.9; line-height: 1.5;">Aim the yellow crosshair, then press and hold <strong>SPRAY WATER</strong> to fill the correct bucket.</p>
         <button id="start-btn">Start Playing</button>
@@ -107,7 +108,7 @@
 
     <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;" vr-mode-ui="enabled: false" renderer="antialias: true; alpha: true;">
         
-        <a-camera position="0 0 0">
+        <a-entity camera>
             <a-entity id="aim-raycaster" raycaster="objects: .clickable; showLine: false;" 
                       position="0 0 -1" geometry="primitive: ring; radiusInner: 0.015; radiusOuter: 0.025" 
                       material="color: #FFB81C; shader: flat; opacity: 0.8"></a-entity>
@@ -122,13 +123,13 @@
                 <a-sphere class="water-drop" radius="0.03" color="#00BFFF" visible="false" material="opacity: 0.8; transparent: true; roughness: 0"></a-sphere>
                 <a-sphere class="water-drop" radius="0.05" color="#00A9CE" visible="false" material="opacity: 0.8; transparent: true; roughness: 0"></a-sphere>
             </a-entity>
-        </a-camera>
+        </a-entity>
 
         <a-marker preset="hiro" id="ar-marker">
             <a-entity id="game-board">
                 
                 <a-entity class="bucket-wrapper" id="bucket0" position="-1.1 0 0">
-                    <a-cylinder class="clickable hitbox" radius="0.6" height="1.5" position="0 0.2 0" material="visible: false"></a-cylinder>
+                    <a-cylinder class="clickable hitbox" radius="0.6" height="1.5" position="0 0.2 0" material="opacity: 0; transparent: true; depthWrite: false"></a-cylinder>
                     
                     <a-cylinder class="bucket-shape" radius="0.45" height="1" color="#E0E0E0" material="side: double; opacity: 0.9; roughness: 0.2" open-ended="true"></a-cylinder>
                     <a-circle radius="0.45" color="#999" position="0 -0.5 0" rotation="-90 0 0"></a-circle>
@@ -139,7 +140,7 @@
                 </a-entity>
 
                 <a-entity class="bucket-wrapper" id="bucket1" position="0 0 -1">
-                    <a-cylinder class="clickable hitbox" radius="0.6" height="1.5" position="0 0.2 0" material="visible: false"></a-cylinder>
+                    <a-cylinder class="clickable hitbox" radius="0.6" height="1.5" position="0 0.2 0" material="opacity: 0; transparent: true; depthWrite: false"></a-cylinder>
                     
                     <a-cylinder class="bucket-shape" radius="0.45" height="1" color="#E0E0E0" material="side: double; opacity: 0.9; roughness: 0.2" open-ended="true"></a-cylinder>
                     <a-circle radius="0.45" color="#999" position="0 -0.5 0" rotation="-90 0 0"></a-circle>
@@ -150,7 +151,7 @@
                 </a-entity>
 
                 <a-entity class="bucket-wrapper" id="bucket2" position="1.1 0 0">
-                    <a-cylinder class="clickable hitbox" radius="0.6" height="1.5" position="0 0.2 0" material="visible: false"></a-cylinder>
+                    <a-cylinder class="clickable hitbox" radius="0.6" height="1.5" position="0 0.2 0" material="opacity: 0; transparent: true; depthWrite: false"></a-cylinder>
                     
                     <a-cylinder class="bucket-shape" radius="0.45" height="1" color="#E0E0E0" material="side: double; opacity: 0.9; roughness: 0.2" open-ended="true"></a-cylinder>
                     <a-circle radius="0.45" color="#999" position="0 -0.5 0" rotation="-90 0 0"></a-circle>
@@ -240,14 +241,12 @@
         const fireHoseVisual = document.querySelector('#fire-hose-visual');
         const aimRaycaster = document.querySelector('#aim-raycaster');
 
-        // Note: Target arrays point to wrapper children now
         const wrappers = [document.querySelector('#bucket0'), document.querySelector('#bucket1'), document.querySelector('#bucket2')];
         const shapes = document.querySelectorAll('.bucket-shape');
         const texts = document.querySelectorAll('.box-text');
         const confettis = document.querySelectorAll('.confetti');
         const sadFaces = document.querySelectorAll('.sad-face');
 
-        // Robust mobile start sequence
         function runStartSequence(e) {
             if(e) e.preventDefault();
             if(hasStarted) return;
@@ -276,14 +275,17 @@
                 }
 
                 if (!isWaiting) {
-                    const hits = aimRaycaster.components.raycaster.intersectedEls;
-                    if (hits.length > 0) {
-                        fillProgress += 16; 
-                        if (fillProgress > 600) {
-                            processAnswer(hits[0]);
+                    // Safe check: Only query if the raycaster component has loaded
+                    if (aimRaycaster.components.raycaster) {
+                        const hits = aimRaycaster.components.raycaster.intersectedEls;
+                        if (hits.length > 0) {
+                            fillProgress += 16; 
+                            if (fillProgress > 600) {
+                                processAnswer(hits[0]);
+                            }
+                        } else {
+                            fillProgress = 0; 
                         }
-                    } else {
-                        fillProgress = 0; 
                     }
                 }
             } else {
@@ -294,10 +296,9 @@
                 if (drop.isActive) {
                     drop.progress += 0.08; 
                     
-                    // FIXED: Lowered spawn origin (Y: -1.2) to match physical 2D nozzle
                     let x = drop.offsetX * drop.progress;
-                    let y = -1.2 + (drop.progress * 1.5) + drop.offsetY; // Smooth arc upwards
-                    let z = -0.3 - (drop.progress * 5); // Shoots forward into 3D scene
+                    let y = -1.2 + (drop.progress * 1.5) + drop.offsetY; 
+                    let z = -0.3 - (drop.progress * 5); 
                     
                     drop.el.setAttribute('position', `${x} ${y} ${z}`);
 
@@ -373,7 +374,6 @@
             isWaiting = true;
             stopSprayMobileSafe();
             
-            // The hitbox is a child, so we get its parent ID
             const parentWrapper = targetHitbox.parentElement;
             const index = parseInt(parentWrapper.id.replace('bucket', ''));
 
