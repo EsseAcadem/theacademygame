@@ -263,7 +263,7 @@
 
     <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;" vr-mode-ui="enabled: false" renderer="antialias: true; alpha: true;">
         
-        <a-camera position="0 0 0" look-controls="magicWindowTrackingEnabled: true; touchEnabled: false;">
+        <a-camera position="0 0 0">
             <a-entity id="aim-raycaster" raycaster="objects: .clickable; showLine: false;" 
                       position="0 0 -1" geometry="primitive: ring; radiusInner: 0.010; radiusOuter: 0.017" 
                       material="color: #FFB81C; shader: flat; opacity: 0.42; transparent: true"></a-entity>
@@ -342,6 +342,7 @@
             const data = buffer.getChannelData(0);
             let last = 0;
 
+            // Slightly softened noise, closer to water than harsh static.
             for (let i = 0; i < bufferSize; i++) {
                 const white = Math.random() * 2 - 1;
                 last = (last * 0.82) + (white * 0.18);
@@ -418,6 +419,7 @@
             hoseGainNode = gain;
             hoseFilterNodes = [lowpass, bandpass];
 
+            // Small splash at the start so it feels less flat.
             playNoiseBurst(0.09, 0.16, 'highpass', 1400);
         }
 
@@ -466,6 +468,7 @@
         function playDing() {
             if(!audioCtx) return;
             resumeAudio();
+            // Soft modern success sparkle.
             playCleanTone(523.25, 'sine', 0.00, 0.20, 0.12);
             playCleanTone(659.25, 'sine', 0.05, 0.22, 0.11);
             playCleanTone(783.99, 'sine', 0.10, 0.25, 0.10);
@@ -476,6 +479,7 @@
         function playBuzzer() {
             if(!audioCtx) return;
             resumeAudio();
+            // Softer negative sound: more app-like, less old arcade buzzer.
             const now = audioCtx.currentTime;
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
@@ -500,6 +504,7 @@
         }
 
         const questionBank = [
+            // GSTT / NHS / EFM questions
             { question: "How many main hospitals are part of Guy's and St Thomas' NHS Foundation Trust?", options: ["3", "5", "7"], answer: 1 },
             { question: "Which hospital is opposite the Houses of Parliament?", options: ["St Thomas'\nHospital", "Guy's\nHospital", "Harefield\nHospital"], answer: 0 },
             { question: "Which of these is a Guy's and St Thomas' value?", options: ["Competitive", "Inclusive", "Secretive"], answer: 1 },
@@ -524,7 +529,24 @@
             { question: "Which is good customer service?", options: ["Listen and help", "Ignore people", "Blame others"], answer: 0 },
             { question: "Why is clear communication important in hospital services?", options: ["It keeps work\nsafe and smooth", "It slows everyone\ndown", "It replaces teamwork"], answer: 0 },
             { question: "What should you do if you are unsure about a task?", options: ["Ask for guidance", "Guess only", "Do nothing"], answer: 0 },
-            { question: "Which word best describes teamwork?", options: ["Collaborating", "Competing", "Avoiding"], answer: 0 }
+            { question: "Which word best describes teamwork?", options: ["Collaborating", "Competing", "Avoiding"], answer: 0 },
+
+            // General knowledge questions
+            { question: "What is the capital city of France?", options: ["Paris", "Madrid", "Rome"], answer: 0 },
+            { question: "Which planet is known as the Red Planet?", options: ["Mars", "Venus", "Jupiter"], answer: 0 },
+            { question: "How many days are in a leap year?", options: ["365", "366", "360"], answer: 1 },
+            { question: "Which ocean is the largest?", options: ["Pacific Ocean", "Atlantic Ocean", "Indian Ocean"], answer: 0 },
+            { question: "What gas do plants absorb from the air?", options: ["Carbon dioxide", "Oxygen", "Helium"], answer: 0 },
+            { question: "What is H2O commonly known as?", options: ["Water", "Salt", "Sugar"], answer: 0 },
+            { question: "How many continents are there?", options: ["5", "6", "7"], answer: 2 },
+            { question: "Which animal is known as the King of the Jungle?", options: ["Lion", "Elephant", "Penguin"], answer: 0 },
+            { question: "What is the largest organ in the human body?", options: ["Skin", "Heart", "Brain"], answer: 0 },
+            { question: "Which country is famous for the Eiffel Tower?", options: ["France", "Brazil", "Japan"], answer: 0 },
+            { question: "How many minutes are in one hour?", options: ["30", "45", "60"], answer: 2 },
+            { question: "What colour do you get by mixing blue and yellow?", options: ["Green", "Purple", "Orange"], answer: 0 },
+            { question: "Which season comes after spring in the UK?", options: ["Summer", "Winter", "Autumn"], answer: 0 },
+            { question: "Which device is used to take photos?", options: ["Camera", "Kettle", "Chair"], answer: 0 },
+            { question: "What do bees make?", options: ["Honey", "Bread", "Coffee"], answer: 0 }
         ];
 
         let quizData = [];
@@ -547,11 +569,10 @@
         let isWaiting = false;
         let isSpraying = false;
         let fillProgress = 0; 
-        let hasStarted = false; 
+        let hasStarted = false; // Prevents double firing
         let markerIsVisible = false;
         let markerHasBeenSeen = false;
         let questionHasLoaded = false;
-        let boardDetached = false;
 
         const marker = document.querySelector('#ar-marker');
         const quizUI = document.querySelector('#quiz-ui');
@@ -565,6 +586,76 @@
         const aimRaycaster = document.querySelector('#aim-raycaster');
         const gameBoard = document.querySelector('#game-board');
 
+        const lastGoodMarkerMatrix = new THREE.Matrix4();
+        let hasLastGoodMarkerPose = false;
+
+        function isGameRunningWithBuckets() {
+            return hasStarted && markerHasBeenSeen && currentQ < quizData.length && gameBoard && marker;
+        }
+
+        function showActiveGameUI() {
+            markerHint.style.display = 'none';
+            quizUI.style.display = 'block';
+            arcadeControls.style.display = 'block';
+            gameBoard.setAttribute('visible', 'true');
+            gameBoard.object3D.visible = true;
+        }
+
+        function saveStableMarkerPose() {
+            if (!marker || !marker.object3D || !marker.object3D.visible) return;
+
+            marker.object3D.updateMatrix();
+
+            const pos = marker.object3D.position;
+            const quat = marker.object3D.quaternion;
+            const scale = marker.object3D.scale;
+            const values = [
+                pos.x, pos.y, pos.z,
+                quat.x, quat.y, quat.z, quat.w,
+                scale.x, scale.y, scale.z
+            ];
+
+            if (!values.every(Number.isFinite)) return;
+
+            lastGoodMarkerMatrix.copy(marker.object3D.matrix);
+            hasLastGoodMarkerPose = true;
+        }
+
+        function restoreStableMarkerPose() {
+            if (!hasLastGoodMarkerPose || !marker || !marker.object3D || !gameBoard || !gameBoard.object3D) return;
+
+            marker.object3D.visible = true;
+            marker.object3D.matrix.copy(lastGoodMarkerMatrix);
+            marker.object3D.matrix.decompose(
+                marker.object3D.position,
+                marker.object3D.quaternion,
+                marker.object3D.scale
+            );
+            marker.object3D.matrixWorldNeedsUpdate = true;
+            marker.object3D.updateMatrixWorld(true);
+
+            gameBoard.object3D.visible = true;
+            gameBoard.setAttribute('visible', 'true');
+        }
+
+        function stabiliseBuckets() {
+            if (!isGameRunningWithBuckets()) return;
+
+            if (markerIsVisible && marker.object3D.visible) {
+                saveStableMarkerPose();
+            } else {
+                restoreStableMarkerPose();
+            }
+
+            showActiveGameUI();
+        }
+
+        if (gameBoard && gameBoard.object3D) {
+            gameBoard.object3D.traverse(child => {
+                child.frustumCulled = false;
+            });
+        }
+
         const shapes = document.querySelectorAll('.bucket-shape');
         const texts = document.querySelectorAll('.box-text');
         const confettis = document.querySelectorAll('.confetti');
@@ -572,16 +663,11 @@
         const bucketWaters = document.querySelectorAll('.bucket-water');
         let activeFillIndex = null;
 
+        // Robust mobile start button
         function runStartSequence(e) {
             if(e) e.preventDefault();
             if(hasStarted) return;
             hasStarted = true;
-            
-            // Request gyroscope permission for iOS devices so they can tilt to aim
-            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                DeviceOrientationEvent.requestPermission().catch(console.error);
-            }
-
             currentQ = 0;
             score = 0;
             questionHasLoaded = false;
@@ -632,6 +718,9 @@
         }
 
         function renderParticles() {
+            // The visible spray is attached to the hose nozzle, while the bucket itself
+            // now shows a water level rising. This makes the spray feel like it is
+            // filling the bucket, rather than passing over it like a straight laser line.
             if (isSpraying && !isWaiting) {
                 const targetBucket = getTargetBucket();
                 if (targetBucket) {
@@ -661,6 +750,20 @@
         }
         requestAnimationFrame(renderParticles);
 
+        function keepBucketsActiveLoop() {
+            // Keep the buckets visible on the last good marker pose.
+            // This avoids AR.js flickers making the board vanish or flip upwards while the game is running.
+            stabiliseBuckets();
+            requestAnimationFrame(keepBucketsActiveLoop);
+        }
+        requestAnimationFrame(keepBucketsActiveLoop);
+
+        setInterval(() => {
+            // Extra guard for mobile browsers where AR.js may briefly hide the marker object.
+            stabiliseBuckets();
+        }, 120);
+
+
         function updateGameVisibility() {
             if (!hasStarted || currentQ >= quizData.length) return;
 
@@ -681,47 +784,15 @@
         marker.addEventListener('markerFound', () => {
             markerIsVisible = true;
             markerHasBeenSeen = true;
+            saveStableMarkerPose();
             updateGameVisibility();
-
-            // When marker is found for the first time, detach the game board 
-            // and lock it into the world space so tilting the phone works freely.
-            if (!boardDetached) {
-                setTimeout(() => {
-                    if (boardDetached || !gameBoard || !marker.object3D.visible) return;
-                    
-                    const scene = document.querySelector('a-scene');
-                    
-                    // Force transform update just in case
-                    gameBoard.object3D.updateMatrixWorld(true);
-                    
-                    const position = new THREE.Vector3();
-                    const quaternion = new THREE.Quaternion();
-                    const scale = new THREE.Vector3();
-                    
-                    gameBoard.object3D.getWorldPosition(position);
-                    gameBoard.object3D.getWorldQuaternion(quaternion);
-                    gameBoard.object3D.getWorldScale(scale);
-                    
-                    // Reparent game board directly to the scene, detaching it from the marker
-                    scene.appendChild(gameBoard);
-                    
-                    // Lock to the exact world position it was scanned at
-                    gameBoard.setAttribute('position', `${position.x} ${position.y} ${position.z}`);
-                    
-                    const euler = new THREE.Euler().setFromQuaternion(quaternion);
-                    const radToDeg = THREE.MathUtils.RAD2DEG;
-                    gameBoard.setAttribute('rotation', `${euler.x * radToDeg} ${euler.y * radToDeg} ${euler.z * radToDeg}`);
-                    
-                    gameBoard.setAttribute('scale', `${scale.x} ${scale.y} ${scale.z}`);
-                    
-                    boardDetached = true;
-                }, 400); // Slight delay to ensure AR tracking is fully stable before capturing
-            }
         });
 
         marker.addEventListener('markerLost', () => {
             markerIsVisible = false;
-            if (!markerHasBeenSeen) {
+            if (markerHasBeenSeen) {
+                stabiliseBuckets();
+            } else {
                 updateGameVisibility();
             }
         });
@@ -744,6 +815,7 @@
             });
         }
 
+        // Extremely safe mobile touch handlers
         function startSpray(e) {
             e.preventDefault();
             if (isWaiting || !hasStarted || !markerHasBeenSeen) return;
@@ -769,6 +841,7 @@
         
         window.addEventListener('mouseup', stopSpray);
         window.addEventListener('touchend', stopSpray);
+
 
         function processAnswer(targetBucket) {
             isWaiting = true;
