@@ -129,13 +129,13 @@
         #shoot-btn:active { transform: scale(0.92); }
 
         #fire-hose-visual {
-            position: absolute; left: 50%; bottom: calc(-34px - env(safe-area-inset-bottom)); transform: translateX(-50%);
+            position: absolute; left: 50%; bottom: -10px; transform: translateX(-50%);
             width: 50px; height: 110px;
             background: linear-gradient(to right, #2c3e50, #34495e, #2c3e50);
             border-radius: 25px 25px 0 0; box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
             transition: transform 0.1s;
         }
-        .hose-firing { transform: translateX(-50%) translateY(4px) !important; }
+        .hose-firing { transform: translateX(-50%) translateY(8px) !important; }
         #fire-hose-nozzle {
             position: absolute; top: -18px; left: 50%; transform: translateX(-50%);
             width: 64px; height: 22px; background: #FFB81C;
@@ -261,7 +261,7 @@
         </div>
     </div>
 
-    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono; trackingMethod: best; maxDetectionRate: 60; canvasWidth: 1280; canvasHeight: 960; sourceWidth: 1280; sourceHeight: 960; displayWidth: 1280; displayHeight: 960;" vr-mode-ui="enabled: false" renderer="antialias: true; alpha: true; precision: mediump;">
+    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;" vr-mode-ui="enabled: false" renderer="antialias: true; alpha: true;">
         
         <a-camera position="0 0 0">
             <a-entity id="aim-raycaster" raycaster="objects: .clickable; showLine: false;" 
@@ -280,7 +280,7 @@
             </a-entity>
         </a-camera>
 
-        <a-marker preset="hiro" id="ar-marker" emitevents="true" smooth="true" smoothCount="3" smoothTolerance="0.03" smoothThreshold="1">
+        <a-marker preset="hiro" id="ar-marker" emitevents="true" smooth="true" smoothCount="5" smoothTolerance="0.01" smoothThreshold="2">
             <a-entity id="game-board">
                 
                 <a-entity class="clickable bucket-wrapper" id="bucket0" position="-1.1 0 0" geometry="primitive: cylinder; radius: 0.5; height: 1.5" material="opacity: 0; transparent: true">
@@ -574,7 +574,6 @@
         let markerHasBeenSeen = false;
         let questionHasLoaded = false;
 
-        const sceneEl = document.querySelector('a-scene');
         const marker = document.querySelector('#ar-marker');
         const quizUI = document.querySelector('#quiz-ui');
         const markerHint = document.querySelector('#marker-hint');
@@ -601,16 +600,13 @@
             hasStarted = true;
             currentQ = 0;
             score = 0;
-            markerIsVisible = false;
-            markerHasBeenSeen = false;
             questionHasLoaded = false;
             prepareQuestionSet();
             document.querySelector('#start-screen').style.display = 'none';
             initAudio();
             gameBoard.setAttribute('visible', 'true');
-            quizUI.style.display = 'none';
-            arcadeControls.style.display = 'none';
-            markerHint.style.display = 'block';
+            if (!questionHasLoaded && currentQ < quizData.length) loadQuestion();
+            updateGameVisibility();
         }
         startBtn.addEventListener('click', runStartSequence);
         startBtn.addEventListener('touchstart', runStartSequence, {passive: false});
@@ -684,49 +680,64 @@
         }
         requestAnimationFrame(renderParticles);
 
-        function refreshAimTargets() {
-            const raycaster = aimRaycaster.components && aimRaycaster.components.raycaster;
-            if (raycaster && raycaster.refreshObjects) {
-                setTimeout(() => raycaster.refreshObjects(), 0);
+        function keepBucketsActiveLoop() {
+            // After the marker is found once, keep the board alive on the last known pose.
+            // When the marker is visible again, AR.js keeps updating the same object, so it still moves normally.
+            if (hasStarted && markerHasBeenSeen && currentQ < quizData.length && gameBoard && marker) {
+                marker.object3D.visible = true;
+                gameBoard.object3D.visible = true;
+                gameBoard.setAttribute('visible', 'true');
+                markerHint.style.display = 'none';
+                quizUI.style.display = 'block';
+                arcadeControls.style.display = 'block';
             }
+            requestAnimationFrame(keepBucketsActiveLoop);
         }
+        requestAnimationFrame(keepBucketsActiveLoop);
 
-        function showGameForMarker() {
-            markerHint.style.display = 'none';
-            quizUI.style.display = 'block';
-            arcadeControls.style.display = 'block';
-            gameBoard.setAttribute('visible', 'true');
-            if (!questionHasLoaded && !isWaiting && currentQ < quizData.length) loadQuestion();
-            refreshAimTargets();
-        }
+        setInterval(() => {
+            // Extra guard for mobile browsers where AR.js may hide the marker object after a tracking flicker.
+            if (hasStarted && markerHasBeenSeen && currentQ < quizData.length && gameBoard && marker) {
+                marker.object3D.visible = true;
+                gameBoard.object3D.visible = true;
+            }
+        }, 120);
 
-        function hideGameForMarkerLoss() {
-            quizUI.style.display = 'none';
-            arcadeControls.style.display = 'none';
-            markerHint.style.display = hasStarted && currentQ < quizData.length ? 'block' : 'none';
-            clearBucketWaters();
-            if (isSpraying) stopSprayMobileSafe();
-        }
 
         function updateGameVisibility() {
             if (!hasStarted || currentQ >= quizData.length) return;
 
-            if (markerIsVisible) {
-                showGameForMarker();
+            if (markerIsVisible || markerHasBeenSeen) {
+                markerHint.style.display = 'none';
+                quizUI.style.display = 'block';
+                arcadeControls.style.display = 'block';
+                gameBoard.setAttribute('visible', 'true');
+                if (!questionHasLoaded && !isWaiting) loadQuestion();
             } else {
-                hideGameForMarkerLoss();
+                quizUI.style.display = 'none';
+                arcadeControls.style.display = 'none';
+                markerHint.style.display = 'block';
+                if(isSpraying) stopSprayMobileSafe();
             }
         }
 
         marker.addEventListener('markerFound', () => {
             markerIsVisible = true;
             markerHasBeenSeen = true;
-            showGameForMarker();
+            updateGameVisibility();
         });
 
         marker.addEventListener('markerLost', () => {
             markerIsVisible = false;
-            hideGameForMarkerLoss();
+            if (markerHasBeenSeen) {
+                marker.object3D.visible = true;
+                gameBoard.object3D.visible = true;
+                markerHint.style.display = 'none';
+                quizUI.style.display = 'block';
+                arcadeControls.style.display = 'block';
+            } else {
+                updateGameVisibility();
+            }
         });
 
         function loadQuestion() {
@@ -750,7 +761,7 @@
         // Extremely safe mobile touch handlers
         function startSpray(e) {
             e.preventDefault();
-            if (isWaiting || !hasStarted || !markerIsVisible) return;
+            if (isWaiting || !hasStarted || !markerHasBeenSeen) return;
             if (!audioCtx) initAudio();
             isSpraying = true;
             fireHoseVisual.classList.add('hose-firing');
