@@ -10,7 +10,6 @@
             background: #005EB8; display: flex; flex-direction: column;
             justify-content: center; align-items: center; z-index: 50; color: white;
             font-family: Arial, sans-serif; text-align: center; padding: 20px;
-            box-sizing: border-box;
         }
         .start-btn {
             padding: 15px 30px; font-size: 20px; background: #FFB81C; color: #000;
@@ -22,81 +21,90 @@
             padding: 15px; border-radius: 10px; box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
             font-family: Arial, sans-serif; text-align: center; display: none; z-index: 10;
         }
-        #warning-message {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.8); color: white; padding: 20px; border-radius: 10px;
-            font-family: Arial, sans-serif; text-align: center; display: none; z-index: 20;
+        
+        /* Your Custom Arcade Controls */
+        #arcade-controls {
+            position: absolute; bottom: 20px; width: 100%; max-width: 600px;
+            left: 50%; transform: translateX(-50%);
+            display: flex; justify-content: space-evenly; align-items: flex-end;
+            z-index: 30; display: none;
+        }
+        .action-btn {
+            padding: 10px; background: #005EB8; color: white; border: 2px solid white;
+            border-radius: 10px; font-weight: bold; font-size: 14px; cursor: pointer;
+            width: 100px; height: 60px; text-align: center;
+        }
+        .action-btn:active { background: #003087; }
+        
+        #fire-hose {
+            width: 50px; height: 100px; background: #003087;
+            border: 3px solid white; border-radius: 5px;
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-weight: bold; font-family: Arial, sans-serif;
+            text-align: center; font-size: 12px; writing-mode: vertical-rl;
         }
     </style>
 </head>
 <body style="margin: 0; overflow: hidden;">
 
-    <!-- Start Screen -->
     <div id="start-screen">
         <h1>EFM Day Shooter</h1>
-        <p>Aim and shoot water into the correct bucket!</p>
+        <p>Aim your phone and shoot water into the correct bucket!</p>
         <button class="start-btn" onclick="startGame()">Tap to Start</button>
     </div>
 
-    <!-- Messages -->
-    <div id="warning-message">Point camera back at the marker!</div>
     <div class="ui-container" id="quiz-ui">
         <h3 id="question-text" style="margin: 0;">Loading...</h3>
-        <p style="margin: 5px 0 0 0; font-size: 14px; color: #555;">Aim the blue ring and tap to shoot water.</p>
+        <p style="margin: 5px 0 0 0; font-size: 14px; color: #555;">Point the blue ring at a bucket and press SHOOT</p>
     </div>
 
-    <!-- AR Scene -->
+    <div id="arcade-controls">
+        <button class="action-btn" id="shoot-btn">SHOOT<br>WATER</button>
+        <div id="fire-hose">FIRE<br>HOSE</div>
+        <button class="action-btn" id="restart-btn" onclick="location.reload()">RESTART</button>
+    </div>
+
     <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
         
-        <!-- Player Camera with Aiming Crosshair -->
         <a-camera position="0 0 0">
-            <a-cursor color="#00BFFF" raycaster="objects: .clickable"></a-cursor>
+            <a-entity id="aim-ring" cursor="rayOrigin: entity" raycaster="objects: .clickable" 
+                      position="0 0 -1" geometry="primitive: ring; radiusInner: 0.03; radiusOuter: 0.05" 
+                      material="color: #00BFFF; shader: flat; opacity: 0.8"></a-entity>
         </a-camera>
 
         <a-marker preset="hiro" id="ar-marker">
             
             <a-entity id="game-board">
-                
-                <!-- BUCKET 1 (Left) -->
                 <a-entity class="clickable bucket-wrapper" id="bucket0" position="-1.5 0 0">
-                    <!-- Bucket shape (upside down cone) -->
                     <a-cone class="bucket-shape" radius-bottom="0.4" radius-top="0.6" height="1" color="#888888"></a-cone>
-                    <!-- Option Text floating above -->
                     <a-text class="box-text" value="Opt 1" position="0 1.2 0" align="center" width="4" color="white" look-at="[camera]"></a-text>
-                    
-                    <!-- Water drop (hidden by default) -->
-                    <a-sphere class="water-ball" radius="0.2" color="#00BFFF" position="0 3 1" visible="false"></a-sphere>
-                    
-                    <!-- Effects -->
+                    <a-sphere class="water-ball" radius="0.2" color="#00BFFF" position="0 -2 1" visible="false"></a-sphere>
                     <a-text class="confetti" value="🎉" position="0 0.5 0" scale="4 4 4" align="center" visible="false" look-at="[camera]"></a-text>
                     <a-entity class="red-light" light="type: point; color: red; intensity: 0; distance: 3" position="0 1 0"></a-entity>
                 </a-entity>
 
-                <!-- BUCKET 2 (Middle) -->
                 <a-entity class="clickable bucket-wrapper" id="bucket1" position="0 0 -1">
                     <a-cone class="bucket-shape" radius-bottom="0.4" radius-top="0.6" height="1" color="#888888"></a-cone>
                     <a-text class="box-text" value="Opt 2" position="0 1.2 0" align="center" width="4" color="white" look-at="[camera]"></a-text>
-                    <a-sphere class="water-ball" radius="0.2" color="#00BFFF" position="0 3 1" visible="false"></a-sphere>
+                    <a-sphere class="water-ball" radius="0.2" color="#00BFFF" position="0 -2 1" visible="false"></a-sphere>
                     <a-text class="confetti" value="🎉" position="0 0.5 0" scale="4 4 4" align="center" visible="false" look-at="[camera]"></a-text>
                     <a-entity class="red-light" light="type: point; color: red; intensity: 0; distance: 3" position="0 1 0"></a-entity>
                 </a-entity>
 
-                <!-- BUCKET 3 (Right) -->
                 <a-entity class="clickable bucket-wrapper" id="bucket2" position="1.5 0 0">
                     <a-cone class="bucket-shape" radius-bottom="0.4" radius-top="0.6" height="1" color="#888888"></a-cone>
                     <a-text class="box-text" value="Opt 3" position="0 1.2 0" align="center" width="4" color="white" look-at="[camera]"></a-text>
-                    <a-sphere class="water-ball" radius="0.2" color="#00BFFF" position="0 3 1" visible="false"></a-sphere>
+                    <a-sphere class="water-ball" radius="0.2" color="#00BFFF" position="0 -2 1" visible="false"></a-sphere>
                     <a-text class="confetti" value="🎉" position="0 0.5 0" scale="4 4 4" align="center" visible="false" look-at="[camera]"></a-text>
                     <a-entity class="red-light" light="type: point; color: red; intensity: 0; distance: 3" position="0 1 0"></a-entity>
                 </a-entity>
-
             </a-entity>
+
         </a-marker>
-        
     </a-scene>
 
     <script>
-        // Sound Engine (No files needed)
+        // Sound Engine
         let audioCtx;
         function initAudio() {
             if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -128,9 +136,12 @@
 
         const marker = document.querySelector('#ar-marker');
         const quizUI = document.querySelector('#quiz-ui');
+        const arcadeControls = document.querySelector('#arcade-controls');
         const questionText = document.querySelector('#question-text');
-        const warningMsg = document.querySelector('#warning-message');
         
+        const shootBtn = document.querySelector('#shoot-btn');
+        const aimRing = document.querySelector('#aim-ring');
+
         const buckets = [document.querySelector('#bucket0'), document.querySelector('#bucket1'), document.querySelector('#bucket2')];
         const shapes = document.querySelectorAll('.bucket-shape');
         const texts = document.querySelectorAll('.box-text');
@@ -144,16 +155,16 @@
         }
 
         marker.addEventListener('markerFound', () => {
-            warningMsg.style.display = 'none';
             if (currentQ < quizData.length) {
                 quizUI.style.display = 'block';
+                arcadeControls.style.display = 'flex';
                 if (!isWaiting) loadQuestion();
             }
         });
 
         marker.addEventListener('markerLost', () => {
-            warningMsg.style.display = 'block';
             quizUI.style.display = 'none';
+            arcadeControls.style.display = 'none';
         });
 
         function loadQuestion() {
@@ -161,7 +172,6 @@
             const q = quizData[currentQ];
             questionText.innerText = q.question;
             
-            // Reset buckets to grey and hide effects
             buckets.forEach((bucket, i) => {
                 shapes[i].setAttribute('color', '#888888');
                 texts[i].setAttribute('value', q.options[i]);
@@ -172,64 +182,65 @@
             });
         }
 
-        // Tap/Shoot logic
-        buckets.forEach((bucket, index) => {
-            bucket.addEventListener('click', () => {
-                if (isWaiting) return;
-                isWaiting = true;
+        // New Shoot Logic
+        shootBtn.addEventListener('click', () => {
+            if (isWaiting) return;
+            
+            // Check what the aim ring is pointing at
+            const hits = aimRing.components.raycaster.intersectedEls;
+            
+            if (hits.length === 0) {
+                // Aiming at nothing
+                playSplash();
+                return; 
+            }
 
-                playSplash(); // Sound for shooting water
+            // Aiming at a bucket
+            isWaiting = true;
+            playSplash();
+            
+            const targetBucket = hits[0];
+            const index = parseInt(targetBucket.id.replace('bucket', ''));
 
-                // 1. Show water ball and animate it dropping into the bucket
-                const water = waterBalls[index];
-                water.setAttribute('visible', 'true');
-                water.setAttribute('position', '0 3 1'); // Start high
-                water.setAttribute('animation', 'property: position; to: 0 0 0; dur: 400; easing: easeInQuad');
+            const water = waterBalls[index];
+            water.setAttribute('visible', 'true');
+            water.setAttribute('position', '0 -3 2'); // Start from hose area
+            water.setAttribute('animation', 'property: position; to: 0 0 0; dur: 400; easing: easeInQuad');
 
-                // 2. Wait 400ms for water to "hit" the bucket, then show result
+            setTimeout(() => {
+                water.setAttribute('visible', 'false');
+
+                if (index === quizData[currentQ].answer) {
+                    score++;
+                    playDing();
+                    shapes[index].setAttribute('color', '#00A9CE'); 
+                    confettis[index].setAttribute('visible', 'true');
+                    confettis[index].setAttribute('position', '0 0.5 0');
+                    confettis[index].setAttribute('animation', 'property: position; to: 0 2 0; dur: 1000; easing: easeOutQuad');
+                } else {
+                    playBuzzer();
+                    shapes[index].setAttribute('color', '#DA291C'); 
+                    lights[index].setAttribute('light', 'intensity: 5');
+                    lights[index].setAttribute('animation', 'property: light.intensity; from: 5; to: 0; dur: 1000; dir: alternate; loop: 3');
+
+                    const correctIdx = quizData[currentQ].answer;
+                    shapes[correctIdx].setAttribute('color', '#00A9CE');
+                    confettis[correctIdx].setAttribute('visible', 'true');
+                    confettis[correctIdx].setAttribute('animation', 'property: position; to: 0 2 0; dur: 1000; easing: easeOutQuad');
+                }
+                
                 setTimeout(() => {
-                    water.setAttribute('visible', 'false'); // Hide water
-
-                    if (index === quizData[currentQ].answer) {
-                        // Correct!
-                        score++;
-                        playDing();
-                        shapes[index].setAttribute('color', '#00A9CE'); // NHS Blue/Green
-                        
-                        // Animate confetti popping up
-                        confettis[index].setAttribute('visible', 'true');
-                        confettis[index].setAttribute('position', '0 0.5 0');
-                        confettis[index].setAttribute('animation', 'property: position; to: 0 2 0; dur: 1000; easing: easeOutQuad');
-                        
+                    currentQ++;
+                    if (currentQ < quizData.length) {
+                        loadQuestion();
                     } else {
-                        // Wrong!
-                        playBuzzer();
-                        shapes[index].setAttribute('color', '#DA291C'); // NHS Red
-                        
-                        // Turn on red flashing light
-                        lights[index].setAttribute('light', 'intensity: 5');
-                        lights[index].setAttribute('animation', 'property: light.intensity; from: 5; to: 0; dur: 1000; dir: alternate; loop: 3');
-
-                        // Show them the correct bucket by turning it green
-                        const correctIdx = quizData[currentQ].answer;
-                        shapes[correctIdx].setAttribute('color', '#00A9CE');
-                        confettis[correctIdx].setAttribute('visible', 'true');
-                        confettis[correctIdx].setAttribute('animation', 'property: position; to: 0 2 0; dur: 1000; easing: easeOutQuad');
+                        quizUI.innerHTML = `<h3>Game Over!</h3><p>Your score: ${score} / ${quizData.length}</p>`;
+                        arcadeControls.style.display = 'none';
+                        document.querySelector('#game-board').setAttribute('visible', 'false');
                     }
-                    
-                    // 3. Wait 3 seconds to see the result, then load next question
-                    setTimeout(() => {
-                        currentQ++;
-                        if (currentQ < quizData.length) {
-                            loadQuestion();
-                        } else {
-                            quizUI.innerHTML = `<h3>Game Over!</h3><p>Your score: ${score} / ${quizData.length}</p>`;
-                            document.querySelector('#game-board').setAttribute('visible', 'false');
-                        }
-                    }, 3000);
-                    
-                }, 400); // 400ms is the time the water takes to drop
-            });
+                }, 3000);
+                
+            }, 400); 
         });
     </script>
 </body>
