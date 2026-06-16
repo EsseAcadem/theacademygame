@@ -150,14 +150,15 @@
         #hose-water-stream {
             position: absolute;
             left: 50%;
-            top: -168px;
+            bottom: 134px; /* Locks the stream to the actual nozzle tip. */
             transform: translateX(-50%);
-            width: 54px;
-            height: 145px;
+            width: 86px;
+            height: clamp(230px, 52vh, 520px); /* Long enough to visually reach the bucket/crosshair area. */
             opacity: 0;
             pointer-events: none;
             overflow: visible;
             transition: opacity 0.08s ease-out;
+            z-index: 2;
         }
         #fire-hose-visual.hose-firing #hose-water-stream { opacity: 1; }
         .stream-core {
@@ -165,11 +166,11 @@
             left: 50%;
             bottom: 0;
             transform: translateX(-50%);
-            width: 11px;
-            height: 138px;
+            width: 13px;
+            height: 100%;
             border-radius: 999px;
-            background: linear-gradient(to top, rgba(0,191,255,0.9), rgba(111,220,255,0.62), rgba(255,255,255,0));
-            filter: blur(0.3px);
+            background: linear-gradient(to top, rgba(0,191,255,0.94), rgba(111,220,255,0.72), rgba(255,255,255,0.06));
+            filter: blur(0.35px);
             animation: waterPulse 0.18s linear infinite;
         }
         .stream-drop {
@@ -182,8 +183,21 @@
             background: rgba(142, 229, 255, 0.88);
             box-shadow: 0 0 8px rgba(0, 191, 255, 0.45);
             opacity: 0;
-            animation: sprayDrop 0.58s linear infinite;
+            animation: sprayDrop 0.68s linear infinite;
             animation-delay: var(--delay);
+        }
+        .stream-splash {
+            position: absolute;
+            left: 50%;
+            top: -6px;
+            width: 58px;
+            height: 22px;
+            border-radius: 50%;
+            transform: translateX(-50%);
+            background: radial-gradient(ellipse at center, rgba(210,247,255,0.95), rgba(0,191,255,0.44) 45%, rgba(0,191,255,0) 72%);
+            filter: blur(0.2px);
+            opacity: 0.9;
+            animation: splashPulse 0.34s ease-in-out infinite;
         }
         @keyframes waterPulse {
             0%, 100% { transform: translateX(-50%) scaleX(0.82); opacity: 0.72; }
@@ -193,6 +207,10 @@
             0% { transform: translate(-50%, 0) scale(0.75); opacity: 0; }
             12% { opacity: 0.92; }
             100% { transform: translate(calc(-50% + var(--x)), calc(-1 * var(--rise))) scale(0.35); opacity: 0; }
+        }
+        @keyframes splashPulse {
+            0%, 100% { transform: translateX(-50%) scale(0.84); opacity: 0.58; }
+            50% { transform: translateX(-50%) scale(1.16); opacity: 0.95; }
         }
     </style>
 </head>
@@ -232,12 +250,13 @@
             <div id="water-spout"></div>
             <div id="hose-water-stream" aria-hidden="true">
                 <span class="stream-core"></span>
-                <span class="stream-drop" style="--x:-8px; --rise:125px; --delay:-0.02s;"></span>
-                <span class="stream-drop" style="--x:6px; --rise:132px; --delay:-0.12s;"></span>
-                <span class="stream-drop" style="--x:-3px; --rise:118px; --delay:-0.22s;"></span>
-                <span class="stream-drop" style="--x:11px; --rise:140px; --delay:-0.31s;"></span>
-                <span class="stream-drop" style="--x:-12px; --rise:136px; --delay:-0.40s;"></span>
-                <span class="stream-drop" style="--x:2px; --rise:128px; --delay:-0.50s;"></span>
+                <span class="stream-splash"></span>
+                <span class="stream-drop" style="--x:-12px; --rise:310px; --delay:-0.02s;"></span>
+                <span class="stream-drop" style="--x:9px; --rise:335px; --delay:-0.12s;"></span>
+                <span class="stream-drop" style="--x:-4px; --rise:292px; --delay:-0.22s;"></span>
+                <span class="stream-drop" style="--x:16px; --rise:352px; --delay:-0.31s;"></span>
+                <span class="stream-drop" style="--x:-18px; --rise:342px; --delay:-0.40s;"></span>
+                <span class="stream-drop" style="--x:3px; --rise:322px; --delay:-0.50s;"></span>
             </div>
         </div>
     </div>
@@ -494,6 +513,9 @@
         let fillProgress = 0; 
         let hasStarted = false; // Prevents double firing
         let markerIsVisible = false;
+        let markerHasBeenDetected = false;
+        let markerTrackingActive = false;
+        let lockedMarkerMatrix = null;
         let questionHasLoaded = false;
 
         const marker = document.querySelector('#ar-marker');
@@ -531,6 +553,12 @@
         }));
 
         function renderParticles() {
+            if (markerTrackingActive) {
+                rememberMarkerPose();
+            } else {
+                keepMarkerLockedOnScreen();
+            }
+
             // The visible spray is now a 2D layer attached to the hose nozzle.
             // This keeps the water visually locked to the hose while the AR raycaster
             // still handles whether the crosshair is aimed at a bucket.
@@ -553,6 +581,21 @@
         requestAnimationFrame(renderParticles);
 
 
+
+        function rememberMarkerPose() {
+            if (!marker || !marker.object3D || !window.THREE) return;
+            if (!lockedMarkerMatrix) lockedMarkerMatrix = new THREE.Matrix4();
+            lockedMarkerMatrix.copy(marker.object3D.matrix);
+        }
+
+        function keepMarkerLockedOnScreen() {
+            if (!markerHasBeenDetected || markerTrackingActive || !lockedMarkerMatrix || !marker.object3D) return;
+            marker.object3D.visible = true;
+            marker.object3D.matrixAutoUpdate = false;
+            marker.object3D.matrix.copy(lockedMarkerMatrix);
+            marker.object3D.matrixWorldNeedsUpdate = true;
+        }
+
         function updateGameVisibility() {
             if (!hasStarted || currentQ >= quizData.length) return;
 
@@ -565,18 +608,29 @@
             } else {
                 quizUI.style.display = 'none';
                 arcadeControls.style.display = 'none';
-                markerHint.style.display = 'block';
+                markerHint.style.display = markerHasBeenDetected ? 'none' : 'block';
                 if(isSpraying) stopSprayMobileSafe();
             }
         }
 
         marker.addEventListener('markerFound', () => {
             markerIsVisible = true;
+            markerHasBeenDetected = true;
+            markerTrackingActive = true;
+            if (marker.object3D) marker.object3D.matrixAutoUpdate = true;
+            rememberMarkerPose();
             updateGameVisibility();
         });
 
         marker.addEventListener('markerLost', () => {
-            markerIsVisible = false;
+            markerTrackingActive = false;
+            if (markerHasBeenDetected) {
+                // Keep the last detected board pose instead of letting AR.js hide it.
+                markerIsVisible = true;
+                keepMarkerLockedOnScreen();
+            } else {
+                markerIsVisible = false;
+            }
             updateGameVisibility();
         });
 
