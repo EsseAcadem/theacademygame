@@ -741,33 +741,46 @@
             aimRaycaster.setAttribute('rotation', `${pitch.toFixed(2)} ${yaw.toFixed(2)} 0`);
         }
 
-        function enterFallbackAimMode() {
-            if (!hasStarted || !markerHasBeenSeen || currentQ >= quizData.length) return;
-            if (!sceneEl || !cameraEl || !gameBoard) return;
-
-            fallbackAimMode = true;
-            tiltBaseBeta = latestTiltBeta;
-            tiltBaseGamma = latestTiltGamma;
-
-            // Move the board out of the marker and place it in front of the camera.
-            // It starts centred, then the player tilts the phone to aim at each bucket.
-            if (gameBoard.parentNode !== sceneEl) {
-                sceneEl.appendChild(gameBoard);
-            }
+        function positionFallbackBoardInFrontOfCamera() {
+            if (!marker || !cameraEl) return;
 
             const cameraObj = cameraEl.object3D;
             const cameraPos = new THREE.Vector3();
             const cameraDir = new THREE.Vector3();
+
             cameraObj.getWorldPosition(cameraPos);
             cameraObj.getWorldDirection(cameraDir);
 
             const boardPos = cameraPos.clone().add(cameraDir.multiplyScalar(3.2));
             boardPos.y -= 0.35;
-            gameBoard.object3D.position.copy(boardPos);
-            gameBoard.object3D.rotation.set(0, 0, 0);
-            gameBoard.object3D.scale.set(1, 1, 1);
+
+            // Important:
+            // Keep the real game board INSIDE the marker.
+            // Do not append/remove it from the marker, because that can upset AR.js tracking.
+            marker.object3D.visible = true;
+            marker.object3D.position.copy(boardPos);
+            marker.object3D.rotation.set(0, 0, 0);
+            marker.object3D.scale.set(1, 1, 1);
+
             gameBoard.object3D.visible = true;
             gameBoard.setAttribute('visible', 'true');
+
+            marker.object3D.updateMatrixWorld(true);
+            gameBoard.object3D.updateMatrixWorld(true);
+        }
+
+        function enterFallbackAimMode() {
+            if (!hasStarted || !markerHasBeenSeen || currentQ >= quizData.length) return;
+            if (!marker || !cameraEl || !gameBoard) return;
+
+            fallbackAimMode = true;
+            tiltBaseBeta = latestTiltBeta;
+            tiltBaseGamma = latestTiltGamma;
+
+            // Marker-safe fallback:
+            // Instead of moving #game-board out of <a-marker>, we move the marker object itself
+            // to a stable position in front of the camera. This keeps the marker DOM intact.
+            positionFallbackBoardInFrontOfCamera();
 
             markerHint.style.display = 'none';
             quizUI.style.display = 'block';
@@ -782,25 +795,27 @@
             tiltBaseGamma = null;
             resetAimRay();
 
-            if (gameBoard && marker && gameBoard.parentNode !== marker) {
-                marker.appendChild(gameBoard);
-                gameBoard.object3D.position.set(0, 0, 0);
-                gameBoard.object3D.rotation.set(0, 0, 0);
-                gameBoard.object3D.scale.set(1, 1, 1);
+            // Leave the game board inside the marker at all times.
+            if (gameBoard && marker) {
                 gameBoard.object3D.visible = true;
                 gameBoard.setAttribute('visible', 'true');
+                marker.object3D.visible = true;
                 refreshAimTargets();
             }
         }
 
         function keepBucketsActiveLoop() {
             if (hasStarted && markerHasBeenSeen && currentQ < quizData.length && gameBoard) {
+                if (fallbackAimMode) {
+                    positionFallbackBoardInFrontOfCamera();
+                    updateFallbackAimFromTilt();
+                }
+
                 gameBoard.object3D.visible = true;
                 gameBoard.setAttribute('visible', 'true');
                 markerHint.style.display = 'none';
                 quizUI.style.display = 'block';
                 arcadeControls.style.display = 'block';
-                if (fallbackAimMode) updateFallbackAimFromTilt();
             }
             requestAnimationFrame(keepBucketsActiveLoop);
         }
