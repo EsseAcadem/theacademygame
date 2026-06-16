@@ -513,9 +513,6 @@
         let fillProgress = 0; 
         let hasStarted = false; // Prevents double firing
         let markerIsVisible = false;
-        let markerHasBeenDetected = false;
-        let markerTrackingActive = false;
-        let lockedMarkerMatrix = null;
         let questionHasLoaded = false;
 
         const marker = document.querySelector('#ar-marker');
@@ -553,12 +550,6 @@
         }));
 
         function renderParticles() {
-            if (markerTrackingActive) {
-                rememberMarkerPose();
-            } else {
-                keepMarkerLockedOnScreen();
-            }
-
             // The visible spray is now a 2D layer attached to the hose nozzle.
             // This keeps the water visually locked to the hose while the AR raycaster
             // still handles whether the crosshair is aimed at a bucket.
@@ -581,21 +572,6 @@
         requestAnimationFrame(renderParticles);
 
 
-
-        function rememberMarkerPose() {
-            if (!marker || !marker.object3D || !window.THREE) return;
-            if (!lockedMarkerMatrix) lockedMarkerMatrix = new THREE.Matrix4();
-            lockedMarkerMatrix.copy(marker.object3D.matrix);
-        }
-
-        function keepMarkerLockedOnScreen() {
-            if (!markerHasBeenDetected || markerTrackingActive || !lockedMarkerMatrix || !marker.object3D) return;
-            marker.object3D.visible = true;
-            marker.object3D.matrixAutoUpdate = false;
-            marker.object3D.matrix.copy(lockedMarkerMatrix);
-            marker.object3D.matrixWorldNeedsUpdate = true;
-        }
-
         function updateGameVisibility() {
             if (!hasStarted || currentQ >= quizData.length) return;
 
@@ -608,29 +584,18 @@
             } else {
                 quizUI.style.display = 'none';
                 arcadeControls.style.display = 'none';
-                markerHint.style.display = markerHasBeenDetected ? 'none' : 'block';
+                markerHint.style.display = 'block';
                 if(isSpraying) stopSprayMobileSafe();
             }
         }
 
         marker.addEventListener('markerFound', () => {
             markerIsVisible = true;
-            markerHasBeenDetected = true;
-            markerTrackingActive = true;
-            if (marker.object3D) marker.object3D.matrixAutoUpdate = true;
-            rememberMarkerPose();
             updateGameVisibility();
         });
 
         marker.addEventListener('markerLost', () => {
-            markerTrackingActive = false;
-            if (markerHasBeenDetected) {
-                // Keep the last detected board pose instead of letting AR.js hide it.
-                markerIsVisible = true;
-                keepMarkerLockedOnScreen();
-            } else {
-                markerIsVisible = false;
-            }
+            markerIsVisible = false;
             updateGameVisibility();
         });
 
