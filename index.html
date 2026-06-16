@@ -13,7 +13,7 @@
         body, html { 
             margin: 0; overflow: hidden; width: 100%; height: 100%; 
             font-family: 'Inter', -apple-system, sans-serif; 
-            -webkit-user-select: none; user-select: none; 
+            -webkit-user-select: none; user-select: none; /* Stops text highlighting on long press */
         }
 
         #start-screen {
@@ -21,8 +21,19 @@
             background: linear-gradient(135deg, #005EB8, #00A9CE);
             display: flex; flex-direction: column; justify-content: center; align-items: center; 
             z-index: 9999; color: white; text-align: center; padding: 20px; box-sizing: border-box;
-            touch-action: none; 
+            touch-action: none; /* Forces mobile to treat this as a solid tap area */
         }
+        #academy-logo {
+            width: min(230px, 72vw);
+            max-height: 140px;
+            object-fit: contain;
+            margin-bottom: 18px;
+            padding: 12px 18px;
+            border-radius: 26px;
+            background: rgba(255, 255, 255, 0.92);
+            box-shadow: 0 12px 32px rgba(0,0,0,0.18);
+        }
+        #start-screen h1 { margin: 0 0 10px 0; }
         #start-btn {
             padding: 16px 40px; font-size: 18px; background: white; color: #005EB8;
             border: none; border-radius: 50px; cursor: pointer; font-weight: bold; margin-top: 30px;
@@ -32,6 +43,7 @@
         #start-btn:active { transform: scale(0.95); }
         
         .ui-container {
+            /* env() handles the iPhone notch */
             position: absolute; top: max(5%, env(safe-area-inset-top)); 
             left: 50%; transform: translateX(-50%);
             width: 90%; max-width: 450px; 
@@ -43,6 +55,7 @@
         #question-text { margin: 0; font-size: 18px; color: #111; font-weight: 700; line-height: 1.4; }
         
         #arcade-controls {
+            /* env() handles the iPhone bottom home bar */
             position: absolute; bottom: 0; left: 0; width: 100%; 
             height: calc(140px + env(safe-area-inset-bottom));
             z-index: 30; display: none; pointer-events: none;
@@ -69,24 +82,29 @@
         }
         .hose-firing { transform: translateX(-50%) translateY(8px) !important; }
         #fire-hose-nozzle {
-            position: absolute; top: -15px; left: -5px;
-            width: 60px; height: 20px; background: #FFB81C;
-            border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            position: absolute; top: -18px; left: 50%; transform: translateX(-50%);
+            width: 64px; height: 22px; background: #FFB81C;
+            border-radius: 11px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);
         }
         #water-spout {
-            position: absolute; top: -25px; left: 15px;
-            width: 20px; height: 10px; background: #222;
-            border-radius: 5px 5px 0 0;
+            position: absolute; top: -31px; left: 50%; transform: translateX(-50%);
+            width: 20px; height: 14px; background: #222;
+            border-radius: 7px 7px 0 0;
         }
     </style>
 </head>
 <body style="margin: 0; overflow: hidden;">
 
     <div id="start-screen">
-        <img src="https://raw.githubusercontent.com/EsseAcadem/theacademygame/668e6854f8df8913447aac80b8d5d5b403ed228d/shade_1.png" alt="Essentia Academy Logo" style="max-width: 220px; margin-bottom: 25px; border-radius: 10px;">
-        <h1 style="margin-bottom: 10px;">EFM Day Game</h1>
-        <p style="margin: 0 20px; opacity: 0.9; line-height: 1.5;">Aim the yellow crosshair, then press and hold <strong>SPRAY</strong> to fill the correct bucket.</p>
+        <img id="academy-logo" src="https://raw.githubusercontent.com/EsseAcadem/theacademygame/668e6854f8df8913447aac80b8d5d5b403ed228d/shade_1.png" alt="Essentia Academy logo">
+        <h1>EFM Day Game</h1>
+        <p style="margin: 0 20px; opacity: 0.9; line-height: 1.5;">Aim the crosshair, then press and hold <strong>SPRAY WATER</strong> to fill the correct bucket.</p>
         <button id="start-btn">Start Playing</button>
+    </div>
+
+    <div class="ui-container" id="marker-hint">
+        <h3 style="margin: 0; font-size: 18px; color: #005EB8;">Point the camera at the marker</h3>
+        <p style="margin: 8px 0 0 0; color: #111; line-height: 1.35;">The buckets will appear when the marker is detected.</p>
     </div>
 
     <div class="ui-container" id="quiz-ui">
@@ -113,7 +131,7 @@
                       position="0 0 -1" geometry="primitive: ring; radiusInner: 0.015; radiusOuter: 0.025" 
                       material="color: #FFB81C; shader: flat; opacity: 0.8"></a-entity>
             
-            <a-entity id="water-particles">
+            <a-entity id="water-particles" position="0 -0.62 -0.85">
                 <a-sphere class="water-drop" radius="0.03" color="#00BFFF" visible="false" material="opacity: 0.8; transparent: true; roughness: 0"></a-sphere>
                 <a-sphere class="water-drop" radius="0.04" color="#00A9CE" visible="false" material="opacity: 0.8; transparent: true; roughness: 0"></a-sphere>
                 <a-sphere class="water-drop" radius="0.03" color="#00BFFF" visible="false" material="opacity: 0.8; transparent: true; roughness: 0"></a-sphere>
@@ -125,11 +143,10 @@
             </a-entity>
         </a-camera>
 
-        <a-marker preset="hiro" id="ar-marker">
+        <a-marker preset="hiro" id="ar-marker" emitevents="true" smooth="true" smoothCount="5" smoothTolerance="0.01" smoothThreshold="2">
             <a-entity id="game-board">
                 
-                <a-entity class="bucket-wrapper" id="bucket0" position="-1.1 0 0">
-                    <a-cylinder class="clickable hitbox" radius="0.6" height="1.5" position="0 0.2 0" material="opacity: 0; transparent: true"></a-cylinder>
+                <a-entity class="clickable bucket-wrapper" id="bucket0" position="-1.1 0 0" geometry="primitive: cylinder; radius: 0.5; height: 1.5" material="opacity: 0; transparent: true">
                     <a-cylinder class="bucket-shape" radius="0.45" height="1" color="#E0E0E0" material="side: double; opacity: 0.9; roughness: 0.2" open-ended="true"></a-cylinder>
                     <a-circle radius="0.45" color="#999" position="0 -0.5 0" rotation="-90 0 0"></a-circle>
                     <a-text class="box-text" value="Opt 1" position="0 1.2 0" align="center" width="4" color="white" font="kelsonsans" look-at="[camera]"></a-text>
@@ -138,8 +155,7 @@
                     <a-text class="sad-face" value="😢" position="0 0 0" scale="5 5 5" align="center" visible="false" look-at="[camera]"></a-text>
                 </a-entity>
 
-                <a-entity class="bucket-wrapper" id="bucket1" position="0 0 -1">
-                    <a-cylinder class="clickable hitbox" radius="0.6" height="1.5" position="0 0.2 0" material="opacity: 0; transparent: true"></a-cylinder>
+                <a-entity class="clickable bucket-wrapper" id="bucket1" position="0 0 -1" geometry="primitive: cylinder; radius: 0.5; height: 1.5" material="opacity: 0; transparent: true">
                     <a-cylinder class="bucket-shape" radius="0.45" height="1" color="#E0E0E0" material="side: double; opacity: 0.9; roughness: 0.2" open-ended="true"></a-cylinder>
                     <a-circle radius="0.45" color="#999" position="0 -0.5 0" rotation="-90 0 0"></a-circle>
                     <a-text class="box-text" value="Opt 2" position="0 1.2 0" align="center" width="4" color="white" font="kelsonsans" look-at="[camera]"></a-text>
@@ -148,8 +164,7 @@
                     <a-text class="sad-face" value="😢" position="0 0 0" scale="5 5 5" align="center" visible="false" look-at="[camera]"></a-text>
                 </a-entity>
 
-                <a-entity class="bucket-wrapper" id="bucket2" position="1.1 0 0">
-                    <a-cylinder class="clickable hitbox" radius="0.6" height="1.5" position="0 0.2 0" material="opacity: 0; transparent: true"></a-cylinder>
+                <a-entity class="clickable bucket-wrapper" id="bucket2" position="1.1 0 0" geometry="primitive: cylinder; radius: 0.5; height: 1.5" material="opacity: 0; transparent: true">
                     <a-cylinder class="bucket-shape" radius="0.45" height="1" color="#E0E0E0" material="side: double; opacity: 0.9; roughness: 0.2" open-ended="true"></a-cylinder>
                     <a-circle radius="0.45" color="#999" position="0 -0.5 0" rotation="-90 0 0"></a-circle>
                     <a-text class="box-text" value="Opt 3" position="0 1.2 0" align="center" width="4" color="white" font="kelsonsans" look-at="[camera]"></a-text>
@@ -226,10 +241,13 @@
         let isWaiting = false;
         let isSpraying = false;
         let fillProgress = 0; 
-        let hasStarted = false; 
+        let hasStarted = false; // Prevents double firing
+        let markerIsVisible = false;
+        let questionHasLoaded = false;
 
         const marker = document.querySelector('#ar-marker');
         const quizUI = document.querySelector('#quiz-ui');
+        const markerHint = document.querySelector('#marker-hint');
         const arcadeControls = document.querySelector('#arcade-controls');
         const questionText = document.querySelector('#question-text');
         
@@ -238,18 +256,21 @@
         const fireHoseVisual = document.querySelector('#fire-hose-visual');
         const aimRaycaster = document.querySelector('#aim-raycaster');
 
-        const wrappers = [document.querySelector('#bucket0'), document.querySelector('#bucket1'), document.querySelector('#bucket2')];
         const shapes = document.querySelectorAll('.bucket-shape');
         const texts = document.querySelectorAll('.box-text');
         const confettis = document.querySelectorAll('.confetti');
         const sadFaces = document.querySelectorAll('.sad-face');
 
+        // Robust mobile start button
         function runStartSequence(e) {
             if(e) e.preventDefault();
             if(hasStarted) return;
             hasStarted = true;
             document.querySelector('#start-screen').style.display = 'none';
             initAudio();
+            document.querySelector('#game-board').setAttribute('visible', 'true');
+            if (!questionHasLoaded && currentQ < quizData.length) loadQuestion();
+            updateGameVisibility();
         }
         startBtn.addEventListener('click', runStartSequence);
         startBtn.addEventListener('touchstart', runStartSequence, {passive: false});
@@ -266,22 +287,22 @@
                         drop.isActive = true;
                         drop.el.setAttribute('visible', 'true');
                         drop.progress = 0;
-                        drop.offsetX = (Math.random() - 0.5) * 0.15;
-                        drop.offsetY = (Math.random() - 0.5) * 0.15;
+                        // Narrow spread: every drop starts at the same nozzle origin,
+                        // then fans out very slightly as it travels towards the crosshair.
+                        drop.offsetX = (Math.random() - 0.5) * 0.18;
+                        drop.offsetY = (Math.random() - 0.5) * 0.10;
                     }
                 }
 
                 if (!isWaiting) {
-                    if (aimRaycaster.components.raycaster) {
-                        const hits = aimRaycaster.components.raycaster.intersectedEls;
-                        if (hits.length > 0) {
-                            fillProgress += 16; 
-                            if (fillProgress > 600) {
-                                processAnswer(hits[0]);
-                            }
-                        } else {
-                            fillProgress = 0; 
+                    const hits = aimRaycaster.components.raycaster.intersectedEls;
+                    if (hits.length > 0) {
+                        fillProgress += 16; 
+                        if (fillProgress > 600) {
+                            processAnswer(hits[0]);
                         }
+                    } else {
+                        fillProgress = 0; 
                     }
                 }
             } else {
@@ -293,8 +314,8 @@
                     drop.progress += 0.08; 
                     
                     let x = drop.offsetX * drop.progress;
-                    let y = -1.0 + (drop.progress * 1.2) + drop.offsetY; 
-                    let z = -0.3 - (drop.progress * 5); 
+                    let y = (drop.progress * 0.65) + (drop.offsetY * drop.progress);
+                    let z = -(drop.progress * 5);
                     
                     drop.el.setAttribute('position', `${x} ${y} ${z}`);
 
@@ -310,22 +331,36 @@
         requestAnimationFrame(renderParticles);
 
 
-        marker.addEventListener('markerFound', () => {
-            if (currentQ < quizData.length) {
+        function updateGameVisibility() {
+            if (!hasStarted || currentQ >= quizData.length) return;
+
+            if (markerIsVisible) {
+                markerHint.style.display = 'none';
                 quizUI.style.display = 'block';
                 arcadeControls.style.display = 'block';
-                if (!isWaiting) loadQuestion();
+                document.querySelector('#game-board').setAttribute('visible', 'true');
+                if (!questionHasLoaded && !isWaiting) loadQuestion();
+            } else {
+                quizUI.style.display = 'none';
+                arcadeControls.style.display = 'none';
+                markerHint.style.display = 'block';
+                if(isSpraying) stopSprayMobileSafe();
             }
+        }
+
+        marker.addEventListener('markerFound', () => {
+            markerIsVisible = true;
+            updateGameVisibility();
         });
 
         marker.addEventListener('markerLost', () => {
-            quizUI.style.display = 'none';
-            arcadeControls.style.display = 'none';
-            if(isSpraying) stopSprayMobileSafe();
+            markerIsVisible = false;
+            updateGameVisibility();
         });
 
         function loadQuestion() {
             isWaiting = false;
+            questionHasLoaded = true;
             fillProgress = 0;
             const q = quizData[currentQ];
             questionText.innerText = q.question;
@@ -340,6 +375,7 @@
             });
         }
 
+        // Extremely safe mobile touch handlers
         function startSpray(e) {
             e.preventDefault();
             if (isWaiting) return;
@@ -366,12 +402,11 @@
         window.addEventListener('touchend', stopSpray);
 
 
-        function processAnswer(targetHitbox) {
+        function processAnswer(targetBucket) {
             isWaiting = true;
             stopSprayMobileSafe();
             
-            const parentWrapper = targetHitbox.parentElement;
-            const index = parseInt(parentWrapper.id.replace('bucket', ''));
+            const index = parseInt(targetBucket.id.replace('bucket', ''));
 
             if (index === quizData[currentQ].answer) {
                 score++;
@@ -395,6 +430,8 @@
                     loadQuestion();
                 } else {
                     quizUI.innerHTML = `<h3 style="margin: 0; font-size: 18px; color: #005EB8;">Game Over!</h3><p style="margin: 10px 0 0 0; font-weight: bold;">Your score: ${score} / ${quizData.length}</p>`;
+                    quizUI.style.display = 'block';
+                    markerHint.style.display = 'none';
                     arcadeControls.style.display = 'none';
                     document.querySelector('#game-board').setAttribute('visible', 'false');
                 }
