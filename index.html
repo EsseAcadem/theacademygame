@@ -2,60 +2,68 @@
 <html>
 <head>
     <title>Essentia Academy Water Shooter</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    
     <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
     <style>
+        body, html { margin: 0; overflow: hidden; width: 100%; height: 100%; }
+
         #start-screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: #005EB8; display: flex; flex-direction: column;
             justify-content: center; align-items: center; z-index: 50; color: white;
             font-family: Arial, sans-serif; text-align: center; padding: 20px;
+            box-sizing: border-box;
         }
         .start-btn {
             padding: 15px 30px; font-size: 20px; background: #FFB81C; color: #000;
             border: none; border-radius: 10px; cursor: pointer; font-weight: bold; margin-top: 20px;
+            -webkit-tap-highlight-color: transparent; /* Removes blue flash on mobile tap */
         }
+        
         .ui-container {
-            position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+            position: absolute; top: 5%; left: 50%; transform: translateX(-50%);
             width: 90%; max-width: 400px; background: rgba(255, 255, 255, 0.95);
             padding: 15px; border-radius: 10px; box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
             font-family: Arial, sans-serif; text-align: center; display: none; z-index: 10;
+            box-sizing: border-box;
         }
         
-        /* The proper Fire Hose UI */
+        /* Mobile Responsive Arcade Controls */
         #arcade-controls {
-            position: absolute; bottom: 0; width: 100%; height: 150px;
-            display: flex; justify-content: center; align-items: flex-end;
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 150px;
             z-index: 30; display: none; pointer-events: none;
         }
         
-        /* The Button */
         #shoot-btn {
-            position: absolute; left: 20px; bottom: 30px;
-            padding: 15px 20px; background: #0072CE; color: white; border: 3px solid white;
-            border-radius: 10px; font-weight: bold; font-size: 16px; cursor: pointer;
+            position: absolute; left: 5%; bottom: 20px; width: 100px;
+            padding: 15px 10px; background: #0072CE; color: white; border: 3px solid white;
+            border-radius: 10px; font-weight: bold; font-size: 14px; cursor: pointer;
             pointer-events: auto; box-shadow: 0px 5px 0px #003087; text-align: center;
+            -webkit-tap-highlight-color: transparent;
         }
         #shoot-btn:active {
             transform: translateY(5px); box-shadow: none; background: #005EB8;
         }
 
-        /* The Visual Hose in the centre */
+        /* Locked to bottom centre */
         #fire-hose-visual {
-            width: 70px; height: 120px;
+            position: absolute; left: 50%; bottom: 0; transform: translateX(-50%);
+            width: 60px; height: 100px;
             background: linear-gradient(to right, #444, #777, #444);
             border: 4px solid #222; border-bottom: none;
             border-radius: 15px 15px 0 0;
-            position: relative;
         }
         #fire-hose-nozzle {
-            position: absolute; top: -20px; left: 5px;
-            width: 60px; height: 30px; background: #FFB81C;
+            position: absolute; top: -20px; left: -2px;
+            width: 56px; height: 25px; background: #FFB81C;
             border-radius: 5px; border: 3px solid #b38000;
         }
         #water-spout {
-            position: absolute; top: -35px; left: 20px;
-            width: 30px; height: 15px; background: #b38000;
+            position: absolute; top: -35px; left: 13px;
+            width: 26px; height: 15px; background: #b38000;
             border-radius: 5px 5px 0 0;
         }
     </style>
@@ -64,12 +72,12 @@
 
     <div id="start-screen">
         <h1>EFM Day Shooter</h1>
-        <p>Aim your screen and shoot water into the correct bucket!</p>
+        <p>Aim your phone and shoot water into the correct bucket!</p>
         <button class="start-btn" onclick="startGame()">Tap to Start</button>
     </div>
 
     <div class="ui-container" id="quiz-ui">
-        <h3 id="question-text" style="margin: 0;">Loading...</h3>
+        <h3 id="question-text" style="margin: 0; font-size: 16px;">Loading...</h3>
     </div>
 
     <div id="arcade-controls">
@@ -83,9 +91,7 @@
     <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
         
         <a-camera position="0 0 0">
-            <a-entity id="aim-ring" cursor="rayOrigin: entity" raycaster="objects: .clickable" 
-                      position="0 0 -1" geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.04" 
-                      material="color: #00BFFF; shader: flat; opacity: 0.8"></a-entity>
+            <a-entity id="aim-ring" cursor="rayOrigin: entity" raycaster="objects: .clickable" position="0 0 -1"></a-entity>
         </a-camera>
 
         <a-marker preset="hiro" id="ar-marker">
@@ -94,13 +100,12 @@
                 <a-entity class="clickable bucket-wrapper" id="bucket0" position="-1.5 0 0">
                     <a-cylinder class="bucket-shape" radius="0.5" height="1" color="#888888" material="side: double" open-ended="true"></a-cylinder>
                     <a-circle radius="0.5" color="#555" position="0 -0.5 0" rotation="-90 0 0"></a-circle>
-                    
                     <a-text class="box-text" value="Opt 1" position="0 1.2 0" align="center" width="4" color="white" look-at="[camera]"></a-text>
                     
                     <a-entity class="water-stream" visible="false">
-                        <a-sphere radius="0.1" color="#00BFFF" position="0 0.2 0"></a-sphere>
-                        <a-sphere radius="0.1" color="#00BFFF" position="0 0.5 0"></a-sphere>
-                        <a-sphere radius="0.1" color="#00BFFF" position="0 0.8 0"></a-sphere>
+                        <a-sphere radius="0.1" color="#00BFFF" position="0 0 0"></a-sphere>
+                        <a-sphere radius="0.1" color="#00BFFF" position="0 0.3 0"></a-sphere>
+                        <a-sphere radius="0.1" color="#00BFFF" position="0 0.6 0"></a-sphere>
                     </a-entity>
                     
                     <a-text class="confetti" value="🎉" position="0 0 0" scale="4 4 4" align="center" visible="false" look-at="[camera]"></a-text>
@@ -113,9 +118,9 @@
                     <a-text class="box-text" value="Opt 2" position="0 1.2 0" align="center" width="4" color="white" look-at="[camera]"></a-text>
                     
                     <a-entity class="water-stream" visible="false">
-                        <a-sphere radius="0.1" color="#00BFFF" position="0 0.2 0"></a-sphere>
-                        <a-sphere radius="0.1" color="#00BFFF" position="0 0.5 0"></a-sphere>
-                        <a-sphere radius="0.1" color="#00BFFF" position="0 0.8 0"></a-sphere>
+                        <a-sphere radius="0.1" color="#00BFFF" position="0 0 0"></a-sphere>
+                        <a-sphere radius="0.1" color="#00BFFF" position="0 0.3 0"></a-sphere>
+                        <a-sphere radius="0.1" color="#00BFFF" position="0 0.6 0"></a-sphere>
                     </a-entity>
                     
                     <a-text class="confetti" value="🎉" position="0 0 0" scale="4 4 4" align="center" visible="false" look-at="[camera]"></a-text>
@@ -128,9 +133,9 @@
                     <a-text class="box-text" value="Opt 3" position="0 1.2 0" align="center" width="4" color="white" look-at="[camera]"></a-text>
                     
                     <a-entity class="water-stream" visible="false">
-                        <a-sphere radius="0.1" color="#00BFFF" position="0 0.2 0"></a-sphere>
-                        <a-sphere radius="0.1" color="#00BFFF" position="0 0.5 0"></a-sphere>
-                        <a-sphere radius="0.1" color="#00BFFF" position="0 0.8 0"></a-sphere>
+                        <a-sphere radius="0.1" color="#00BFFF" position="0 0 0"></a-sphere>
+                        <a-sphere radius="0.1" color="#00BFFF" position="0 0.3 0"></a-sphere>
+                        <a-sphere radius="0.1" color="#00BFFF" position="0 0.6 0"></a-sphere>
                     </a-entity>
                     
                     <a-text class="confetti" value="🎉" position="0 0 0" scale="4 4 4" align="center" visible="false" look-at="[camera]"></a-text>
@@ -219,11 +224,9 @@
             });
         }
 
-        // Shoot Button Logic
         shootBtn.addEventListener('click', () => {
             if (isWaiting) return;
             
-            // Find which bucket the blue ring is aiming at
             const hits = aimRing.components.raycaster.intersectedEls;
             if (hits.length === 0) return; 
             
@@ -233,45 +236,40 @@
             const targetBucket = hits[0];
             const index = parseInt(targetBucket.id.replace('bucket', ''));
 
-            // Show water flying from camera space to the bucket
+            // Shoot animation from hose upwards into the bucket
             const stream = streams[index];
             stream.setAttribute('visible', 'true');
-            stream.setAttribute('animation', 'property: position; from: 0 0 2; to: 0 0 0; dur: 400; easing: easeInQuad');
+            stream.setAttribute('animation', 'property: position; from: 0 -4 4; to: 0 0 0; dur: 400; easing: easeInQuad');
 
             setTimeout(() => {
                 stream.setAttribute('visible', 'false');
 
-                // Check answer
                 if (index === quizData[currentQ].answer) {
-                    // Correct: Green & Confetti
                     score++;
                     playDing();
                     shapes[index].setAttribute('color', '#00A9CE'); 
                     confettis[index].setAttribute('visible', 'true');
                     confettis[index].setAttribute('animation', 'property: position; from: 0 0 0; to: 0 1.5 0; dur: 800; easing: easeOutQuad');
                 } else {
-                    // Wrong: Red & Sad Face
                     playBuzzer();
                     shapes[index].setAttribute('color', '#DA291C'); 
                     sadFaces[index].setAttribute('visible', 'true');
                     sadFaces[index].setAttribute('animation', 'property: position; from: 0 0 0; to: 0 1.5 0; dur: 800; easing: easeOutQuad');
 
-                    // Show correct answer by turning it green
                     const correctIdx = quizData[currentQ].answer;
                     shapes[correctIdx].setAttribute('color', '#00A9CE');
                 }
                 
-                // Wait 3 seconds then go to next question
                 setTimeout(() => {
                     currentQ++;
                     if (currentQ < quizData.length) {
                         loadQuestion();
                     } else {
-                        quizUI.innerHTML = `<h3>Game Over!</h3><p>Your score: ${score} / ${quizData.length}</p>`;
+                        quizUI.innerHTML = `<h3 style="margin: 0; font-size: 16px;">Game Over!</h3><p style="margin: 5px 0 0 0;">Your score: ${score} / ${quizData.length}</p>`;
                         arcadeControls.style.display = 'none';
                         document.querySelector('#game-board').setAttribute('visible', 'false');
                     }
-                }, 3000);
+                }, 2500); 
                 
             }, 400); 
         });
