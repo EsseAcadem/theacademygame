@@ -261,7 +261,7 @@
         </div>
     </div>
 
-    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;" vr-mode-ui="enabled: false" renderer="antialias: true; alpha: true;">
+    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono; trackingMethod: best; maxDetectionRate: 60; canvasWidth: 1280; canvasHeight: 960; sourceWidth: 1280; sourceHeight: 960; displayWidth: 1280; displayHeight: 960;" vr-mode-ui="enabled: false" renderer="antialias: true; alpha: true; precision: mediump;">
         
         <a-camera position="0 0 0">
             <a-entity id="aim-raycaster" raycaster="objects: .clickable; showLine: false;" 
@@ -280,7 +280,7 @@
             </a-entity>
         </a-camera>
 
-        <a-marker preset="hiro" id="ar-marker" emitevents="true" smooth="true" smoothCount="5" smoothTolerance="0.01" smoothThreshold="2">
+        <a-marker preset="hiro" id="ar-marker" emitevents="true" smooth="true" smoothCount="3" smoothTolerance="0.03" smoothThreshold="1">
             <a-entity id="game-board">
                 
                 <a-entity class="clickable bucket-wrapper" id="bucket0" position="-1.1 0 0" geometry="primitive: cylinder; radius: 0.5; height: 1.5" material="opacity: 0; transparent: true">
@@ -573,14 +573,8 @@
         let markerIsVisible = false;
         let markerHasBeenSeen = false;
         let questionHasLoaded = false;
-        let fallbackAimMode = false;
-        let tiltBaseBeta = null;
-        let tiltBaseGamma = null;
-        let latestTiltBeta = 0;
-        let latestTiltGamma = 0;
 
         const sceneEl = document.querySelector('a-scene');
-        const cameraEl = document.querySelector('a-camera');
         const marker = document.querySelector('#ar-marker');
         const quizUI = document.querySelector('#quiz-ui');
         const markerHint = document.querySelector('#marker-hint');
@@ -607,14 +601,16 @@
             hasStarted = true;
             currentQ = 0;
             score = 0;
+            markerIsVisible = false;
+            markerHasBeenSeen = false;
             questionHasLoaded = false;
             prepareQuestionSet();
             document.querySelector('#start-screen').style.display = 'none';
             initAudio();
-            requestTiltPermission();
             gameBoard.setAttribute('visible', 'true');
-            if (!questionHasLoaded && currentQ < quizData.length) loadQuestion();
-            updateGameVisibility();
+            quizUI.style.display = 'none';
+            arcadeControls.style.display = 'none';
+            markerHint.style.display = 'block';
         }
         startBtn.addEventListener('click', runStartSequence);
         startBtn.addEventListener('touchstart', runStartSequence, {passive: false});
@@ -688,10 +684,6 @@
         }
         requestAnimationFrame(renderParticles);
 
-        function clamp(value, min, max) {
-            return Math.max(min, Math.min(max, value));
-        }
-
         function refreshAimTargets() {
             const raycaster = aimRaycaster.components && aimRaycaster.components.raycaster;
             if (raycaster && raycaster.refreshObjects) {
@@ -699,164 +691,42 @@
             }
         }
 
-        function requestTiltPermission() {
-            // iOS needs this to be requested from the Start button tap.
-            if (typeof DeviceOrientationEvent !== 'undefined' &&
-                typeof DeviceOrientationEvent.requestPermission === 'function') {
-                DeviceOrientationEvent.requestPermission().catch(() => {});
-            }
-        }
-
-        window.addEventListener('deviceorientation', (event) => {
-            if (event.beta === null || event.gamma === null) return;
-            latestTiltBeta = event.beta;
-            latestTiltGamma = event.gamma;
-            updateFallbackAimFromTilt();
-        }, true);
-
-        function resetAimRay() {
-            aimRaycaster.setAttribute('position', '0 0 -1');
-            aimRaycaster.setAttribute('rotation', '0 0 0');
-        }
-
-        function updateFallbackAimFromTilt() {
-            if (!fallbackAimMode) return;
-
-            if (tiltBaseBeta === null || tiltBaseGamma === null) {
-                tiltBaseBeta = latestTiltBeta;
-                tiltBaseGamma = latestTiltGamma;
-            }
-
-            const deltaBeta = clamp(latestTiltBeta - tiltBaseBeta, -24, 24);
-            const deltaGamma = clamp(latestTiltGamma - tiltBaseGamma, -28, 28);
-
-            // Rotate the ray itself, and move the small aim ring just enough to show direction.
-            // This gives the fallback mode a real phone-tilt aiming feel when marker tracking drops.
-            const pitch = clamp(deltaBeta * 0.95, -24, 24);
-            const yaw = clamp(deltaGamma * -1.25, -34, 34);
-            const aimX = clamp(deltaGamma * 0.008, -0.20, 0.20);
-            const aimY = clamp(deltaBeta * -0.006, -0.16, 0.16);
-
-            aimRaycaster.setAttribute('position', `${aimX.toFixed(3)} ${aimY.toFixed(3)} -1`);
-            aimRaycaster.setAttribute('rotation', `${pitch.toFixed(2)} ${yaw.toFixed(2)} 0`);
-        }
-
-        function positionFallbackBoardInFrontOfCamera() {
-            if (!marker || !cameraEl) return;
-
-            const cameraObj = cameraEl.object3D;
-            const cameraPos = new THREE.Vector3();
-            const cameraDir = new THREE.Vector3();
-
-            cameraObj.getWorldPosition(cameraPos);
-            cameraObj.getWorldDirection(cameraDir);
-
-            const boardPos = cameraPos.clone().add(cameraDir.multiplyScalar(3.2));
-            boardPos.y -= 0.35;
-
-            // Important:
-            // Keep the real game board INSIDE the marker.
-            // Do not append/remove it from the marker, because that can upset AR.js tracking.
-            marker.object3D.visible = true;
-            marker.object3D.position.copy(boardPos);
-            marker.object3D.rotation.set(0, 0, 0);
-            marker.object3D.scale.set(1, 1, 1);
-
-            gameBoard.object3D.visible = true;
-            gameBoard.setAttribute('visible', 'true');
-
-            marker.object3D.updateMatrixWorld(true);
-            gameBoard.object3D.updateMatrixWorld(true);
-        }
-
-        function enterFallbackAimMode() {
-            if (!hasStarted || !markerHasBeenSeen || currentQ >= quizData.length) return;
-            if (!marker || !cameraEl || !gameBoard) return;
-
-            fallbackAimMode = true;
-            tiltBaseBeta = latestTiltBeta;
-            tiltBaseGamma = latestTiltGamma;
-
-            // Marker-safe fallback:
-            // Instead of moving #game-board out of <a-marker>, we move the marker object itself
-            // to a stable position in front of the camera. This keeps the marker DOM intact.
-            positionFallbackBoardInFrontOfCamera();
-
+        function showGameForMarker() {
             markerHint.style.display = 'none';
             quizUI.style.display = 'block';
             arcadeControls.style.display = 'block';
-            updateFallbackAimFromTilt();
+            gameBoard.setAttribute('visible', 'true');
+            if (!questionHasLoaded && !isWaiting && currentQ < quizData.length) loadQuestion();
             refreshAimTargets();
         }
 
-        function exitFallbackAimMode() {
-            fallbackAimMode = false;
-            tiltBaseBeta = null;
-            tiltBaseGamma = null;
-            resetAimRay();
-
-            // Leave the game board inside the marker at all times.
-            if (gameBoard && marker) {
-                gameBoard.object3D.visible = true;
-                gameBoard.setAttribute('visible', 'true');
-                marker.object3D.visible = true;
-                refreshAimTargets();
-            }
+        function hideGameForMarkerLoss() {
+            quizUI.style.display = 'none';
+            arcadeControls.style.display = 'none';
+            markerHint.style.display = hasStarted && currentQ < quizData.length ? 'block' : 'none';
+            clearBucketWaters();
+            if (isSpraying) stopSprayMobileSafe();
         }
-
-        function keepBucketsActiveLoop() {
-            if (hasStarted && markerHasBeenSeen && currentQ < quizData.length && gameBoard) {
-                if (fallbackAimMode) {
-                    positionFallbackBoardInFrontOfCamera();
-                    updateFallbackAimFromTilt();
-                }
-
-                gameBoard.object3D.visible = true;
-                gameBoard.setAttribute('visible', 'true');
-                markerHint.style.display = 'none';
-                quizUI.style.display = 'block';
-                arcadeControls.style.display = 'block';
-            }
-            requestAnimationFrame(keepBucketsActiveLoop);
-        }
-        requestAnimationFrame(keepBucketsActiveLoop);
-
 
         function updateGameVisibility() {
             if (!hasStarted || currentQ >= quizData.length) return;
 
             if (markerIsVisible) {
-                exitFallbackAimMode();
-                markerHint.style.display = 'none';
-                quizUI.style.display = 'block';
-                arcadeControls.style.display = 'block';
-                gameBoard.setAttribute('visible', 'true');
-                if (!questionHasLoaded && !isWaiting) loadQuestion();
-            } else if (markerHasBeenSeen) {
-                enterFallbackAimMode();
-                if (!questionHasLoaded && !isWaiting) loadQuestion();
+                showGameForMarker();
             } else {
-                quizUI.style.display = 'none';
-                arcadeControls.style.display = 'none';
-                markerHint.style.display = 'block';
-                if(isSpraying) stopSprayMobileSafe();
+                hideGameForMarkerLoss();
             }
         }
 
         marker.addEventListener('markerFound', () => {
             markerIsVisible = true;
             markerHasBeenSeen = true;
-            exitFallbackAimMode();
-            updateGameVisibility();
+            showGameForMarker();
         });
 
         marker.addEventListener('markerLost', () => {
             markerIsVisible = false;
-            if (markerHasBeenSeen) {
-                enterFallbackAimMode();
-            } else {
-                updateGameVisibility();
-            }
+            hideGameForMarkerLoss();
         });
 
         function loadQuestion() {
@@ -880,7 +750,7 @@
         // Extremely safe mobile touch handlers
         function startSpray(e) {
             e.preventDefault();
-            if (isWaiting || !hasStarted || !markerHasBeenSeen) return;
+            if (isWaiting || !hasStarted || !markerIsVisible) return;
             if (!audioCtx) initAudio();
             isSpraying = true;
             fireHoseVisual.classList.add('hose-firing');
@@ -937,8 +807,6 @@
                     quizUI.style.display = 'block';
                     markerHint.style.display = 'none';
                     arcadeControls.style.display = 'none';
-                    fallbackAimMode = false;
-                    resetAimRay();
                     gameBoard.setAttribute('visible', 'false');
                 }
             }, 2500); 
