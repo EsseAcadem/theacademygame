@@ -173,31 +173,28 @@
             stroke-linejoin: round;
         }
         .water-glow {
-            stroke: rgba(111, 220, 255, 0.36);
-            stroke-width: 22;
+            stroke: rgba(0, 169, 206, 0.24);
+            stroke-width: 20;
             filter: blur(2px);
         }
         .water-main {
-            stroke: rgba(0, 191, 255, 0.88);
+            stroke: rgba(0, 191, 255, 0.86);
             stroke-width: 10;
-            stroke-dasharray: 20 13;
+            stroke-dasharray: 18 14;
             animation: waterFlow 0.24s linear infinite;
         }
         .water-highlight {
-            stroke: rgba(230, 252, 255, 0.92);
-            stroke-width: 3;
-            stroke-dasharray: 8 18;
-            animation: waterFlow 0.18s linear infinite;
+            display: none;
         }
         .water-impact {
-            fill: rgba(210, 247, 255, 0.78);
-            stroke: rgba(0, 191, 255, 0.48);
+            fill: rgba(0, 191, 255, 0.28);
+            stroke: rgba(0, 169, 206, 0.38);
             stroke-width: 2;
             animation: splashPulse 0.34s ease-in-out infinite;
             transform-origin: center;
         }
         .water-fall {
-            stroke: rgba(142, 229, 255, 0.82);
+            stroke: rgba(0, 191, 255, 0.62);
             stroke-width: 5;
             stroke-dasharray: 8 12;
             animation: waterFall 0.32s linear infinite;
@@ -256,7 +253,6 @@
                     <!-- Curved stream: starts at the hose, bends forward, then drops into the target area. -->
                     <path class="water-arc water-glow" d="M46 350 C46 260 58 205 48 142 C43 110 38 76 46 36" />
                     <path class="water-arc water-main" d="M46 350 C46 260 58 205 48 142 C43 110 38 76 46 36" />
-                    <path class="water-arc water-highlight" d="M50 348 C50 258 62 204 52 140 C47 108 42 76 50 38" />
                     <ellipse class="water-impact" cx="46" cy="36" rx="25" ry="8" />
                     <path class="water-fall" d="M37 46 C36 62 36 80 37 101" />
                     <path class="water-fall delay" d="M55 45 C58 64 58 82 55 104" />
@@ -269,8 +265,8 @@
         
         <a-camera position="0 0 0">
             <a-entity id="aim-raycaster" raycaster="objects: .clickable; showLine: false;" 
-                      position="0 0 -1" geometry="primitive: ring; radiusInner: 0.015; radiusOuter: 0.025" 
-                      material="color: #FFB81C; shader: flat; opacity: 0.8"></a-entity>
+                      position="0 0 -1" geometry="primitive: ring; radiusInner: 0.010; radiusOuter: 0.017" 
+                      material="color: #FFB81C; shader: flat; opacity: 0.42; transparent: true"></a-entity>
             
             <a-entity id="water-particles" position="0 -0.62 -0.85">
                 <a-sphere class="water-drop" radius="0.03" color="#00BFFF" visible="false" material="opacity: 0.8; transparent: true; roughness: 0"></a-sphere>
@@ -507,11 +503,66 @@
             playNoiseBurst(0.11, 0.06, 'lowpass', 650);
         }
 
-        const quizData = [
+        const questionBank = [
+            // GSTT / NHS / EFM questions
+            { question: "How many main hospitals are part of Guy's and St Thomas' NHS Foundation Trust?", options: ["3", "5", "7"], answer: 1 },
+            { question: "Which hospital is opposite the Houses of Parliament?", options: ["St Thomas'\nHospital", "Guy's\nHospital", "Harefield\nHospital"], answer: 0 },
+            { question: "Which of these is a Guy's and St Thomas' value?", options: ["Competitive", "Inclusive", "Secretive"], answer: 1 },
+            { question: "Which three words are Trust values?", options: ["Caring, Ambitious,\nInclusive", "Fast, Private,\nProfitable", "Quiet, Formal,\nStrict"], answer: 0 },
             { question: "What does EFM stand for?", options: ["Estates &\nFacilities", "Engineering &\nFinance", "Essential\nMaintenance"], answer: 0 },
-            { question: "How long is a Level 3 Apprenticeship?", options: ["6 months", "12 months", "18-24\nmonths"], answer: 2 },
-            { question: "When was St Thomas' Hospital founded?", options: ["1850", "1173", "1948"], answer: 1 }
+            { question: "What type of care does the Trust provide?", options: ["Hospital and\ncommunity care", "Only dental care", "Only private care"], answer: 0 },
+            { question: "When was St Thomas' Hospital founded?", options: ["1173", "1850", "1948"], answer: 0 },
+            { question: "Guy's Hospital dates from which period?", options: ["The 1720s", "The 1940s", "The 2000s"], answer: 0 },
+            { question: "Evelina London Children's Hospital was founded in which year?", options: ["1869", "1915", "1948"], answer: 0 },
+            { question: "Harefield Hospital was founded in which year?", options: ["1915", "1720", "1173"], answer: 0 },
+            { question: "Royal Brompton Hospital dates from which period?", options: ["The 1840s", "The 1920s", "The 1980s"], answer: 0 },
+            { question: "What is the NHS mainly funded by?", options: ["Taxation", "Cinema tickets", "Shopping points"], answer: 0 },
+            { question: "What does PPE stand for?", options: ["Personal Protective\nEquipment", "Patient Parking\nEntry", "Public Payment\nEmail"], answer: 0 },
+            { question: "Which action best supports infection prevention?", options: ["Clean hands", "Ignore spills", "Share gloves"], answer: 0 },
+            { question: "What should staff do when they see a wet floor?", options: ["Report it and\nmake it safe", "Walk away", "Hide the sign"], answer: 0 },
+            { question: "Which service helps keep hospital areas clean and safe?", options: ["Housekeeping", "Cinema booking", "Online shopping"], answer: 0 },
+            { question: "Which team may help move patients and equipment safely?", options: ["Portering", "Catering only", "Payroll only"], answer: 0 },
+            { question: "What is a key aim of staff training?", options: ["Build skills", "Create confusion", "Avoid learning"], answer: 0 },
+            { question: "What is an apprenticeship?", options: ["Work-based\nlearning", "A parking permit", "A lunch menu"], answer: 0 },
+            { question: "How long is a typical Level 3 apprenticeship?", options: ["6 months", "18-24\nmonths", "10 years"], answer: 1 },
+            { question: "What is off-the-job training for apprentices?", options: ["Learning linked\nto the role", "Annual leave", "A sick note"], answer: 0 },
+            { question: "Which is good customer service?", options: ["Listen and help", "Ignore people", "Blame others"], answer: 0 },
+            { question: "Why is clear communication important in hospital services?", options: ["It keeps work\nsafe and smooth", "It slows everyone\ndown", "It replaces teamwork"], answer: 0 },
+            { question: "What should you do if you are unsure about a task?", options: ["Ask for guidance", "Guess only", "Do nothing"], answer: 0 },
+            { question: "Which word best describes teamwork?", options: ["Collaborating", "Competing", "Avoiding"], answer: 0 },
+
+            // General knowledge questions
+            { question: "What is the capital city of France?", options: ["Paris", "Madrid", "Rome"], answer: 0 },
+            { question: "Which planet is known as the Red Planet?", options: ["Mars", "Venus", "Jupiter"], answer: 0 },
+            { question: "How many days are in a leap year?", options: ["365", "366", "360"], answer: 1 },
+            { question: "Which ocean is the largest?", options: ["Pacific Ocean", "Atlantic Ocean", "Indian Ocean"], answer: 0 },
+            { question: "What gas do plants absorb from the air?", options: ["Carbon dioxide", "Oxygen", "Helium"], answer: 0 },
+            { question: "What is H2O commonly known as?", options: ["Water", "Salt", "Sugar"], answer: 0 },
+            { question: "How many continents are there?", options: ["5", "6", "7"], answer: 2 },
+            { question: "Which animal is known as the King of the Jungle?", options: ["Lion", "Elephant", "Penguin"], answer: 0 },
+            { question: "What is the largest organ in the human body?", options: ["Skin", "Heart", "Brain"], answer: 0 },
+            { question: "Which country is famous for the Eiffel Tower?", options: ["France", "Brazil", "Japan"], answer: 0 },
+            { question: "How many minutes are in one hour?", options: ["30", "45", "60"], answer: 2 },
+            { question: "What colour do you get by mixing blue and yellow?", options: ["Green", "Purple", "Orange"], answer: 0 },
+            { question: "Which season comes after spring in the UK?", options: ["Summer", "Winter", "Autumn"], answer: 0 },
+            { question: "Which device is used to take photos?", options: ["Camera", "Kettle", "Chair"], answer: 0 },
+            { question: "What do bees make?", options: ["Honey", "Bread", "Coffee"], answer: 0 }
         ];
+
+        let quizData = [];
+
+        function shuffleArray(items) {
+            const shuffled = [...items];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled;
+        }
+
+        function prepareQuestionSet() {
+            quizData = shuffleArray(questionBank).slice(0, 10);
+        }
 
         let currentQ = 0;
         let score = 0;
@@ -547,6 +598,10 @@
             if(e) e.preventDefault();
             if(hasStarted) return;
             hasStarted = true;
+            currentQ = 0;
+            score = 0;
+            questionHasLoaded = false;
+            prepareQuestionSet();
             document.querySelector('#start-screen').style.display = 'none';
             initAudio();
             gameBoard.setAttribute('visible', 'true');
@@ -626,15 +681,28 @@
         requestAnimationFrame(renderParticles);
 
         function keepBucketsActiveLoop() {
-            // After the marker is found once, keep the buckets active on the last known pose.
-            // When the marker is visible again, AR.js still updates the pose, so the buckets move normally.
-            if (markerHasBeenSeen && currentQ < quizData.length && gameBoard && marker) {
+            // After the marker is found once, keep the board alive on the last known pose.
+            // When the marker is visible again, AR.js keeps updating the same object, so it still moves normally.
+            if (hasStarted && markerHasBeenSeen && currentQ < quizData.length && gameBoard && marker) {
                 marker.object3D.visible = true;
                 gameBoard.object3D.visible = true;
+                gameBoard.setAttribute('visible', 'true');
+                markerHint.style.display = 'none';
+                quizUI.style.display = 'block';
+                arcadeControls.style.display = 'block';
             }
             requestAnimationFrame(keepBucketsActiveLoop);
         }
         requestAnimationFrame(keepBucketsActiveLoop);
+
+        setInterval(() => {
+            // Extra guard for mobile browsers where AR.js may hide the marker object after a tracking flicker.
+            if (hasStarted && markerHasBeenSeen && currentQ < quizData.length && gameBoard && marker) {
+                marker.object3D.visible = true;
+                gameBoard.object3D.visible = true;
+            }
+        }, 120);
+
 
         function updateGameVisibility() {
             if (!hasStarted || currentQ >= quizData.length) return;
@@ -661,7 +729,15 @@
 
         marker.addEventListener('markerLost', () => {
             markerIsVisible = false;
-            updateGameVisibility();
+            if (markerHasBeenSeen) {
+                marker.object3D.visible = true;
+                gameBoard.object3D.visible = true;
+                markerHint.style.display = 'none';
+                quizUI.style.display = 'block';
+                arcadeControls.style.display = 'block';
+            } else {
+                updateGameVisibility();
+            }
         });
 
         function loadQuestion() {
