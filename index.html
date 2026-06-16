@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Essentia Academy Water Shooter</title>
+    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+    <style>
+        #start-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #005EB8; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; z-index: 50; color: white;
+            font-family: Arial, sans-serif; text-align: center; padding: 20px;
+            box-sizing: border-box;
+        }
+        .start-btn {
+            padding: 15px 30px; font-size: 20px; background: #FFB81C; color: #000;
+            border: none; border-radius: 10px; cursor: pointer; font-weight: bold; margin-top: 20px;
+        }
+        .ui-container {
+            position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+            width: 90%; max-width: 400px; background: rgba(255, 255, 255, 0.95);
+            padding: 15px; border-radius: 10px; box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
+            font-family: Arial, sans-serif; text-align: center; display: none; z-index: 10;
+        }
+        #warning-message {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.8); color: white; padding: 20px; border-radius: 10px;
+            font-family: Arial, sans-serif; text-align: center; display: none; z-index: 20;
+        }
+    </style>
+</head>
+<body style="margin: 0; overflow: hidden;">
+
+    <!-- Start Screen -->
+    <div id="start-screen">
+        <h1>EFM Day Shooter</h1>
+        <p>Aim and shoot water into the correct bucket!</p>
+        <button class="start-btn" onclick="startGame()">Tap to Start</button>
+    </div>
+
+    <!-- Messages -->
+    <div id="warning-message">Point camera back at the marker!</div>
+    <div class="ui-container" id="quiz-ui">
+        <h3 id="question-text" style="margin: 0;">Loading...</h3>
+        <p style="margin: 5px 0 0 0; font-size: 14px; color: #555;">Aim the blue ring and tap to shoot water.</p>
+    </div>
+
+    <!-- AR Scene -->
+    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
+        
+        <!-- Player Camera with Aiming Crosshair -->
+        <a-camera position="0 0 0">
+            <a-cursor color="#00BFFF" raycaster="objects: .clickable"></a-cursor>
+        </a-camera>
+
+        <a-marker preset="hiro" id="ar-marker">
+            
+            <a-entity id="game-board">
+                
+                <!-- BUCKET 1 (Left) -->
+                <a-entity class="clickable bucket-wrapper" id="bucket0" position="-1.5 0 0">
+                    <!-- Bucket shape (upside down cone) -->
+                    <a-cone class="bucket-shape" radius-bottom="0.4" radius-top="0.6" height="1" color="#888888"></a-cone>
+                    <!-- Option Text floating above -->
+                    <a-text class="box-text" value="Opt 1" position="0 1.2 0" align="center" width="4" color="white" look-at="[camera]"></a-text>
+                    
+                    <!-- Water drop (hidden by default) -->
+                    <a-sphere class="water-ball" radius="0.2" color="#00BFFF" position="0 3 1" visible="false"></a-sphere>
+                    
+                    <!-- Effects -->
+                    <a-text class="confetti" value="🎉" position="0 0.5 0" scale="4 4 4" align="center" visible="false" look-at="[camera]"></a-text>
+                    <a-entity class="red-light" light="type: point; color: red; intensity: 0; distance: 3" position="0 1 0"></a-entity>
+                </a-entity>
+
+                <!-- BUCKET 2 (Middle) -->
+                <a-entity class="clickable bucket-wrapper" id="bucket1" position="0 0 -1">
+                    <a-cone class="bucket-shape" radius-bottom="0.4" radius-top="0.6" height="1" color="#888888"></a-cone>
+                    <a-text class="box-text" value="Opt 2" position="0 1.2 0" align="center" width="4" color="white" look-at="[camera]"></a-text>
+                    <a-sphere class="water-ball" radius="0.2" color="#00BFFF" position="0 3 1" visible="false"></a-sphere>
+                    <a-text class="confetti" value="🎉" position="0 0.5 0" scale="4 4 4" align="center" visible="false" look-at="[camera]"></a-text>
+                    <a-entity class="red-light" light="type: point; color: red; intensity: 0; distance: 3" position="0 1 0"></a-entity>
+                </a-entity>
+
+                <!-- BUCKET 3 (Right) -->
+                <a-entity class="clickable bucket-wrapper" id="bucket2" position="1.5 0 0">
+                    <a-cone class="bucket-shape" radius-bottom="0.4" radius-top="0.6" height="1" color="#888888"></a-cone>
+                    <a-text class="box-text" value="Opt 3" position="0 1.2 0" align="center" width="4" color="white" look-at="[camera]"></a-text>
+                    <a-sphere class="water-ball" radius="0.2" color="#00BFFF" position="0 3 1" visible="false"></a-sphere>
+                    <a-text class="confetti" value="🎉" position="0 0.5 0" scale="4 4 4" align="center" visible="false" look-at="[camera]"></a-text>
+                    <a-entity class="red-light" light="type: point; color: red; intensity: 0; distance: 3" position="0 1 0"></a-entity>
+                </a-entity>
+
+            </a-entity>
+        </a-marker>
+        
+    </a-scene>
+
+    <script>
+        // Sound Engine (No files needed)
+        let audioCtx;
+        function initAudio() {
+            if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        function playTone(freq, type, duration) {
+            if(!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type; osc.frequency.value = freq;
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start();
+            gain.gain.setValueAtTime(1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+            setTimeout(() => osc.stop(), duration * 1000);
+        }
+        function playSplash() { playTone(400, 'sine', 0.2); }
+        function playDing() { playTone(800, 'sine', 0.1); setTimeout(() => playTone(1200, 'sine', 0.3), 100); }
+        function playBuzzer() { playTone(150, 'sawtooth', 0.4); }
+
+        const quizData = [
+            { question: "What does EFM stand for?", options: ["Estates &\nFacilities", "Engineering &\nFinance", "Essential\nMaintenance"], answer: 0 },
+            { question: "How long is a Level 3 Apprenticeship?", options: ["6 months", "12 months", "18-24\nmonths"], answer: 2 },
+            { question: "When was St Thomas' Hospital founded?", options: ["1850", "1173", "1948"], answer: 1 }
+        ];
+
+        let currentQ = 0;
+        let score = 0;
+        let isWaiting = false;
+
+        const marker = document.querySelector('#ar-marker');
+        const quizUI = document.querySelector('#quiz-ui');
+        const questionText = document.querySelector('#question-text');
+        const warningMsg = document.querySelector('#warning-message');
+        
+        const buckets = [document.querySelector('#bucket0'), document.querySelector('#bucket1'), document.querySelector('#bucket2')];
+        const shapes = document.querySelectorAll('.bucket-shape');
+        const texts = document.querySelectorAll('.box-text');
+        const waterBalls = document.querySelectorAll('.water-ball');
+        const confettis = document.querySelectorAll('.confetti');
+        const lights = document.querySelectorAll('.red-light');
+
+        function startGame() {
+            document.querySelector('#start-screen').style.display = 'none';
+            initAudio();
+        }
+
+        marker.addEventListener('markerFound', () => {
+            warningMsg.style.display = 'none';
+            if (currentQ < quizData.length) {
+                quizUI.style.display = 'block';
+                if (!isWaiting) loadQuestion();
+            }
+        });
+
+        marker.addEventListener('markerLost', () => {
+            warningMsg.style.display = 'block';
+            quizUI.style.display = 'none';
+        });
+
+        function loadQuestion() {
+            isWaiting = false;
+            const q = quizData[currentQ];
+            questionText.innerText = q.question;
+            
+            // Reset buckets to grey and hide effects
+            buckets.forEach((bucket, i) => {
+                shapes[i].setAttribute('color', '#888888');
+                texts[i].setAttribute('value', q.options[i]);
+                confettis[i].setAttribute('visible', 'false');
+                confettis[i].removeAttribute('animation');
+                lights[i].setAttribute('light', 'intensity: 0');
+                waterBalls[i].setAttribute('visible', 'false');
+            });
+        }
+
+        // Tap/Shoot logic
+        buckets.forEach((bucket, index) => {
+            bucket.addEventListener('click', () => {
+                if (isWaiting) return;
+                isWaiting = true;
+
+                playSplash(); // Sound for shooting water
+
+                // 1. Show water ball and animate it dropping into the bucket
+                const water = waterBalls[index];
+                water.setAttribute('visible', 'true');
+                water.setAttribute('position', '0 3 1'); // Start high
+                water.setAttribute('animation', 'property: position; to: 0 0 0; dur: 400; easing: easeInQuad');
+
+                // 2. Wait 400ms for water to "hit" the bucket, then show result
+                setTimeout(() => {
+                    water.setAttribute('visible', 'false'); // Hide water
+
+                    if (index === quizData[currentQ].answer) {
+                        // Correct!
+                        score++;
+                        playDing();
+                        shapes[index].setAttribute('color', '#00A9CE'); // NHS Blue/Green
+                        
+                        // Animate confetti popping up
+                        confettis[index].setAttribute('visible', 'true');
+                        confettis[index].setAttribute('position', '0 0.5 0');
+                        confettis[index].setAttribute('animation', 'property: position; to: 0 2 0; dur: 1000; easing: easeOutQuad');
+                        
+                    } else {
+                        // Wrong!
+                        playBuzzer();
+                        shapes[index].setAttribute('color', '#DA291C'); // NHS Red
+                        
+                        // Turn on red flashing light
+                        lights[index].setAttribute('light', 'intensity: 5');
+                        lights[index].setAttribute('animation', 'property: light.intensity; from: 5; to: 0; dur: 1000; dir: alternate; loop: 3');
+
+                        // Show them the correct bucket by turning it green
+                        const correctIdx = quizData[currentQ].answer;
+                        shapes[correctIdx].setAttribute('color', '#00A9CE');
+                        confettis[correctIdx].setAttribute('visible', 'true');
+                        confettis[correctIdx].setAttribute('animation', 'property: position; to: 0 2 0; dur: 1000; easing: easeOutQuad');
+                    }
+                    
+                    // 3. Wait 3 seconds to see the result, then load next question
+                    setTimeout(() => {
+                        currentQ++;
+                        if (currentQ < quizData.length) {
+                            loadQuestion();
+                        } else {
+                            quizUI.innerHTML = `<h3>Game Over!</h3><p>Your score: ${score} / ${quizData.length}</p>`;
+                            document.querySelector('#game-board').setAttribute('visible', 'false');
+                        }
+                    }, 3000);
+                    
+                }, 400); // 400ms is the time the water takes to drop
+            });
+        });
+    </script>
+</body>
+</html>
