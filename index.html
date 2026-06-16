@@ -22,26 +22,41 @@
             font-family: Arial, sans-serif; text-align: center; display: none; z-index: 10;
         }
         
-        /* Your Custom Arcade Controls */
+        /* The proper Fire Hose UI */
         #arcade-controls {
-            position: absolute; bottom: 20px; width: 100%; max-width: 600px;
-            left: 50%; transform: translateX(-50%);
-            display: flex; justify-content: space-evenly; align-items: flex-end;
-            z-index: 30; display: none;
+            position: absolute; bottom: 0; width: 100%; height: 150px;
+            display: flex; justify-content: center; align-items: flex-end;
+            z-index: 30; display: none; pointer-events: none;
         }
-        .action-btn {
-            padding: 10px; background: #005EB8; color: white; border: 2px solid white;
-            border-radius: 10px; font-weight: bold; font-size: 14px; cursor: pointer;
-            width: 100px; height: 60px; text-align: center;
-        }
-        .action-btn:active { background: #003087; }
         
-        #fire-hose {
-            width: 50px; height: 100px; background: #003087;
-            border: 3px solid white; border-radius: 5px;
-            display: flex; align-items: center; justify-content: center;
-            color: white; font-weight: bold; font-family: Arial, sans-serif;
-            text-align: center; font-size: 12px; writing-mode: vertical-rl;
+        /* The Button */
+        #shoot-btn {
+            position: absolute; left: 20px; bottom: 30px;
+            padding: 15px 20px; background: #0072CE; color: white; border: 3px solid white;
+            border-radius: 10px; font-weight: bold; font-size: 16px; cursor: pointer;
+            pointer-events: auto; box-shadow: 0px 5px 0px #003087; text-align: center;
+        }
+        #shoot-btn:active {
+            transform: translateY(5px); box-shadow: none; background: #005EB8;
+        }
+
+        /* The Visual Hose in the centre */
+        #fire-hose-visual {
+            width: 70px; height: 120px;
+            background: linear-gradient(to right, #444, #777, #444);
+            border: 4px solid #222; border-bottom: none;
+            border-radius: 15px 15px 0 0;
+            position: relative;
+        }
+        #fire-hose-nozzle {
+            position: absolute; top: -20px; left: 5px;
+            width: 60px; height: 30px; background: #FFB81C;
+            border-radius: 5px; border: 3px solid #b38000;
+        }
+        #water-spout {
+            position: absolute; top: -35px; left: 20px;
+            width: 30px; height: 15px; background: #b38000;
+            border-radius: 5px 5px 0 0;
         }
     </style>
 </head>
@@ -49,62 +64,84 @@
 
     <div id="start-screen">
         <h1>EFM Day Shooter</h1>
-        <p>Aim your phone and shoot water into the correct bucket!</p>
+        <p>Aim your screen and shoot water into the correct bucket!</p>
         <button class="start-btn" onclick="startGame()">Tap to Start</button>
     </div>
 
     <div class="ui-container" id="quiz-ui">
         <h3 id="question-text" style="margin: 0;">Loading...</h3>
-        <p style="margin: 5px 0 0 0; font-size: 14px; color: #555;">Point the blue ring at a bucket and press SHOOT</p>
     </div>
 
     <div id="arcade-controls">
-        <button class="action-btn" id="shoot-btn">SHOOT<br>WATER</button>
-        <div id="fire-hose">FIRE<br>HOSE</div>
-        <button class="action-btn" id="restart-btn" onclick="location.reload()">RESTART</button>
+        <button id="shoot-btn">SHOOT<br>WATER</button>
+        <div id="fire-hose-visual">
+            <div id="fire-hose-nozzle"></div>
+            <div id="water-spout"></div>
+        </div>
     </div>
 
     <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
         
         <a-camera position="0 0 0">
             <a-entity id="aim-ring" cursor="rayOrigin: entity" raycaster="objects: .clickable" 
-                      position="0 0 -1" geometry="primitive: ring; radiusInner: 0.03; radiusOuter: 0.05" 
+                      position="0 0 -1" geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.04" 
                       material="color: #00BFFF; shader: flat; opacity: 0.8"></a-entity>
         </a-camera>
 
         <a-marker preset="hiro" id="ar-marker">
-            
             <a-entity id="game-board">
+                
                 <a-entity class="clickable bucket-wrapper" id="bucket0" position="-1.5 0 0">
-                    <a-cone class="bucket-shape" radius-bottom="0.4" radius-top="0.6" height="1" color="#888888"></a-cone>
+                    <a-cylinder class="bucket-shape" radius="0.5" height="1" color="#888888" material="side: double" open-ended="true"></a-cylinder>
+                    <a-circle radius="0.5" color="#555" position="0 -0.5 0" rotation="-90 0 0"></a-circle>
+                    
                     <a-text class="box-text" value="Opt 1" position="0 1.2 0" align="center" width="4" color="white" look-at="[camera]"></a-text>
-                    <a-sphere class="water-ball" radius="0.2" color="#00BFFF" position="0 -2 1" visible="false"></a-sphere>
-                    <a-text class="confetti" value="🎉" position="0 0.5 0" scale="4 4 4" align="center" visible="false" look-at="[camera]"></a-text>
-                    <a-entity class="red-light" light="type: point; color: red; intensity: 0; distance: 3" position="0 1 0"></a-entity>
+                    
+                    <a-entity class="water-stream" visible="false">
+                        <a-sphere radius="0.1" color="#00BFFF" position="0 0.2 0"></a-sphere>
+                        <a-sphere radius="0.1" color="#00BFFF" position="0 0.5 0"></a-sphere>
+                        <a-sphere radius="0.1" color="#00BFFF" position="0 0.8 0"></a-sphere>
+                    </a-entity>
+                    
+                    <a-text class="confetti" value="🎉" position="0 0 0" scale="4 4 4" align="center" visible="false" look-at="[camera]"></a-text>
+                    <a-text class="sad-face" value="😢" position="0 0 0" scale="4 4 4" align="center" visible="false" look-at="[camera]"></a-text>
                 </a-entity>
 
                 <a-entity class="clickable bucket-wrapper" id="bucket1" position="0 0 -1">
-                    <a-cone class="bucket-shape" radius-bottom="0.4" radius-top="0.6" height="1" color="#888888"></a-cone>
+                    <a-cylinder class="bucket-shape" radius="0.5" height="1" color="#888888" material="side: double" open-ended="true"></a-cylinder>
+                    <a-circle radius="0.5" color="#555" position="0 -0.5 0" rotation="-90 0 0"></a-circle>
                     <a-text class="box-text" value="Opt 2" position="0 1.2 0" align="center" width="4" color="white" look-at="[camera]"></a-text>
-                    <a-sphere class="water-ball" radius="0.2" color="#00BFFF" position="0 -2 1" visible="false"></a-sphere>
-                    <a-text class="confetti" value="🎉" position="0 0.5 0" scale="4 4 4" align="center" visible="false" look-at="[camera]"></a-text>
-                    <a-entity class="red-light" light="type: point; color: red; intensity: 0; distance: 3" position="0 1 0"></a-entity>
+                    
+                    <a-entity class="water-stream" visible="false">
+                        <a-sphere radius="0.1" color="#00BFFF" position="0 0.2 0"></a-sphere>
+                        <a-sphere radius="0.1" color="#00BFFF" position="0 0.5 0"></a-sphere>
+                        <a-sphere radius="0.1" color="#00BFFF" position="0 0.8 0"></a-sphere>
+                    </a-entity>
+                    
+                    <a-text class="confetti" value="🎉" position="0 0 0" scale="4 4 4" align="center" visible="false" look-at="[camera]"></a-text>
+                    <a-text class="sad-face" value="😢" position="0 0 0" scale="4 4 4" align="center" visible="false" look-at="[camera]"></a-text>
                 </a-entity>
 
                 <a-entity class="clickable bucket-wrapper" id="bucket2" position="1.5 0 0">
-                    <a-cone class="bucket-shape" radius-bottom="0.4" radius-top="0.6" height="1" color="#888888"></a-cone>
+                    <a-cylinder class="bucket-shape" radius="0.5" height="1" color="#888888" material="side: double" open-ended="true"></a-cylinder>
+                    <a-circle radius="0.5" color="#555" position="0 -0.5 0" rotation="-90 0 0"></a-circle>
                     <a-text class="box-text" value="Opt 3" position="0 1.2 0" align="center" width="4" color="white" look-at="[camera]"></a-text>
-                    <a-sphere class="water-ball" radius="0.2" color="#00BFFF" position="0 -2 1" visible="false"></a-sphere>
-                    <a-text class="confetti" value="🎉" position="0 0.5 0" scale="4 4 4" align="center" visible="false" look-at="[camera]"></a-text>
-                    <a-entity class="red-light" light="type: point; color: red; intensity: 0; distance: 3" position="0 1 0"></a-entity>
+                    
+                    <a-entity class="water-stream" visible="false">
+                        <a-sphere radius="0.1" color="#00BFFF" position="0 0.2 0"></a-sphere>
+                        <a-sphere radius="0.1" color="#00BFFF" position="0 0.5 0"></a-sphere>
+                        <a-sphere radius="0.1" color="#00BFFF" position="0 0.8 0"></a-sphere>
+                    </a-entity>
+                    
+                    <a-text class="confetti" value="🎉" position="0 0 0" scale="4 4 4" align="center" visible="false" look-at="[camera]"></a-text>
+                    <a-text class="sad-face" value="😢" position="0 0 0" scale="4 4 4" align="center" visible="false" look-at="[camera]"></a-text>
                 </a-entity>
             </a-entity>
-
         </a-marker>
     </a-scene>
 
     <script>
-        // Sound Engine
+        // Sound engine
         let audioCtx;
         function initAudio() {
             if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -120,7 +157,7 @@
             gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
             setTimeout(() => osc.stop(), duration * 1000);
         }
-        function playSplash() { playTone(400, 'sine', 0.2); }
+        function playSplash() { playTone(400, 'sine', 0.3); }
         function playDing() { playTone(800, 'sine', 0.1); setTimeout(() => playTone(1200, 'sine', 0.3), 100); }
         function playBuzzer() { playTone(150, 'sawtooth', 0.4); }
 
@@ -142,12 +179,11 @@
         const shootBtn = document.querySelector('#shoot-btn');
         const aimRing = document.querySelector('#aim-ring');
 
-        const buckets = [document.querySelector('#bucket0'), document.querySelector('#bucket1'), document.querySelector('#bucket2')];
         const shapes = document.querySelectorAll('.bucket-shape');
         const texts = document.querySelectorAll('.box-text');
-        const waterBalls = document.querySelectorAll('.water-ball');
+        const streams = document.querySelectorAll('.water-stream');
         const confettis = document.querySelectorAll('.confetti');
-        const lights = document.querySelectorAll('.red-light');
+        const sadFaces = document.querySelectorAll('.sad-face');
 
         function startGame() {
             document.querySelector('#start-screen').style.display = 'none';
@@ -172,63 +208,60 @@
             const q = quizData[currentQ];
             questionText.innerText = q.question;
             
-            buckets.forEach((bucket, i) => {
-                shapes[i].setAttribute('color', '#888888');
+            shapes.forEach((shape, i) => {
+                shape.setAttribute('color', '#888888');
                 texts[i].setAttribute('value', q.options[i]);
                 confettis[i].setAttribute('visible', 'false');
                 confettis[i].removeAttribute('animation');
-                lights[i].setAttribute('light', 'intensity: 0');
-                waterBalls[i].setAttribute('visible', 'false');
+                sadFaces[i].setAttribute('visible', 'false');
+                sadFaces[i].removeAttribute('animation');
+                streams[i].setAttribute('visible', 'false');
             });
         }
 
-        // New Shoot Logic
+        // Shoot Button Logic
         shootBtn.addEventListener('click', () => {
             if (isWaiting) return;
             
-            // Check what the aim ring is pointing at
+            // Find which bucket the blue ring is aiming at
             const hits = aimRing.components.raycaster.intersectedEls;
+            if (hits.length === 0) return; 
             
-            if (hits.length === 0) {
-                // Aiming at nothing
-                playSplash();
-                return; 
-            }
-
-            // Aiming at a bucket
             isWaiting = true;
             playSplash();
             
             const targetBucket = hits[0];
             const index = parseInt(targetBucket.id.replace('bucket', ''));
 
-            const water = waterBalls[index];
-            water.setAttribute('visible', 'true');
-            water.setAttribute('position', '0 -3 2'); // Start from hose area
-            water.setAttribute('animation', 'property: position; to: 0 0 0; dur: 400; easing: easeInQuad');
+            // Show water flying from camera space to the bucket
+            const stream = streams[index];
+            stream.setAttribute('visible', 'true');
+            stream.setAttribute('animation', 'property: position; from: 0 0 2; to: 0 0 0; dur: 400; easing: easeInQuad');
 
             setTimeout(() => {
-                water.setAttribute('visible', 'false');
+                stream.setAttribute('visible', 'false');
 
+                // Check answer
                 if (index === quizData[currentQ].answer) {
+                    // Correct: Green & Confetti
                     score++;
                     playDing();
                     shapes[index].setAttribute('color', '#00A9CE'); 
                     confettis[index].setAttribute('visible', 'true');
-                    confettis[index].setAttribute('position', '0 0.5 0');
-                    confettis[index].setAttribute('animation', 'property: position; to: 0 2 0; dur: 1000; easing: easeOutQuad');
+                    confettis[index].setAttribute('animation', 'property: position; from: 0 0 0; to: 0 1.5 0; dur: 800; easing: easeOutQuad');
                 } else {
+                    // Wrong: Red & Sad Face
                     playBuzzer();
                     shapes[index].setAttribute('color', '#DA291C'); 
-                    lights[index].setAttribute('light', 'intensity: 5');
-                    lights[index].setAttribute('animation', 'property: light.intensity; from: 5; to: 0; dur: 1000; dir: alternate; loop: 3');
+                    sadFaces[index].setAttribute('visible', 'true');
+                    sadFaces[index].setAttribute('animation', 'property: position; from: 0 0 0; to: 0 1.5 0; dur: 800; easing: easeOutQuad');
 
+                    // Show correct answer by turning it green
                     const correctIdx = quizData[currentQ].answer;
                     shapes[correctIdx].setAttribute('color', '#00A9CE');
-                    confettis[correctIdx].setAttribute('visible', 'true');
-                    confettis[correctIdx].setAttribute('animation', 'property: position; to: 0 2 0; dur: 1000; easing: easeOutQuad');
                 }
                 
+                // Wait 3 seconds then go to next question
                 setTimeout(() => {
                     currentQ++;
                     if (currentQ < quizData.length) {
