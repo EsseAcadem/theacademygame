@@ -1,71 +1,78 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Essentia Academy Water Shooter</title>
+    <title>Essentia Academy Water Game</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="apple-mobile-web-app-capable" content="yes">
     
     <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
     <style>
-        body, html { margin: 0; overflow: hidden; width: 100%; height: 100%; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+        
+        body, html { margin: 0; overflow: hidden; width: 100%; height: 100%; font-family: 'Inter', -apple-system, sans-serif; }
 
+        /* Modern Start Screen */
         #start-screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: #005EB8; display: flex; flex-direction: column;
-            justify-content: center; align-items: center; z-index: 50; color: white;
-            font-family: Arial, sans-serif; text-align: center; padding: 20px;
-            box-sizing: border-box;
+            background: linear-gradient(135deg, #005EB8, #00A9CE);
+            display: flex; flex-direction: column; justify-content: center; align-items: center; 
+            z-index: 50; color: white; text-align: center; padding: 20px; box-sizing: border-box;
         }
         .start-btn {
-            padding: 15px 30px; font-size: 20px; background: #FFB81C; color: #000;
-            border: none; border-radius: 10px; cursor: pointer; font-weight: bold; margin-top: 20px;
+            padding: 16px 40px; font-size: 18px; background: white; color: #005EB8;
+            border: none; border-radius: 50px; cursor: pointer; font-weight: bold; margin-top: 30px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); transition: transform 0.2s;
             -webkit-tap-highlight-color: transparent;
         }
+        .start-btn:active { transform: scale(0.95); }
         
+        /* Glassmorphism Quiz UI */
         .ui-container {
-            position: absolute; top: 5%; left: 50%; transform: translateX(-50%);
-            width: 90%; max-width: 400px; background: rgba(255, 255, 255, 0.95);
-            padding: 15px; border-radius: 10px; box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
-            font-family: Arial, sans-serif; text-align: center; display: none; z-index: 10;
-            box-sizing: border-box;
+            position: absolute; top: 8%; left: 50%; transform: translateX(-50%);
+            width: 90%; max-width: 450px; 
+            background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.5); border-radius: 20px;
+            padding: 20px; box-shadow: 0 12px 35px rgba(0,0,0,0.15);
+            text-align: center; display: none; z-index: 10; box-sizing: border-box;
         }
+        #question-text { margin: 0; font-size: 18px; color: #111; font-weight: 700; line-height: 1.4; }
         
+        /* Modern Arcade Controls */
         #arcade-controls {
-            position: absolute; bottom: 0; left: 0; width: 100%; height: 150px;
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 160px;
             z-index: 30; display: none; pointer-events: none;
         }
         
+        /* Sleek Pill Button */
         #shoot-btn {
-            position: absolute; left: 5%; bottom: 20px; width: 100px;
-            padding: 15px 10px; background: #0072CE; color: white; border: 3px solid white;
-            border-radius: 10px; font-weight: bold; font-size: 14px; cursor: pointer;
-            pointer-events: auto; box-shadow: 0px 5px 0px #003087; text-align: center;
-            -webkit-tap-highlight-color: transparent;
+            position: absolute; left: 5%; bottom: 40px;
+            padding: 18px 24px; background: linear-gradient(135deg, #00BFFF, #0072CE); 
+            color: white; border: none; border-radius: 50px; 
+            font-weight: bold; font-size: 14px; letter-spacing: 1px; cursor: pointer;
+            pointer-events: auto; box-shadow: 0 8px 25px rgba(0, 114, 206, 0.4); 
+            text-align: center; display: flex; align-items: center; justify-content: center; gap: 8px;
+            -webkit-tap-highlight-color: transparent; user-select: none; transition: transform 0.1s;
         }
-        #shoot-btn:active {
-            transform: translateY(5px); box-shadow: none; background: #005EB8;
-        }
+        #shoot-btn:active { transform: scale(0.92); }
 
+        /* Minimalist Modern Hose UI */
         #fire-hose-visual {
-            position: absolute; left: 50%; bottom: 0; transform: translateX(-50%);
-            width: 60px; height: 100px;
-            background: linear-gradient(to right, #444, #777, #444);
-            border: 4px solid #222; border-bottom: none;
-            border-radius: 15px 15px 0 0;
+            position: absolute; left: 50%; bottom: -10px; transform: translateX(-50%);
+            width: 50px; height: 110px;
+            background: linear-gradient(to right, #2c3e50, #34495e, #2c3e50);
+            border-radius: 25px 25px 0 0; box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
             transition: transform 0.1s;
         }
-        .hose-firing {
-            transform: translateX(-50%) translateY(10px) !important;
-        }
+        .hose-firing { transform: translateX(-50%) translateY(8px) !important; }
         #fire-hose-nozzle {
-            position: absolute; top: -20px; left: -2px;
-            width: 56px; height: 25px; background: #FFB81C;
-            border-radius: 5px; border: 3px solid #b38000;
+            position: absolute; top: -15px; left: -5px;
+            width: 60px; height: 20px; background: #FFB81C;
+            border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);
         }
         #water-spout {
-            position: absolute; top: -35px; left: 13px;
-            width: 26px; height: 15px; background: #b38000;
+            position: absolute; top: -25px; left: 15px;
+            width: 20px; height: 10px; background: #222;
             border-radius: 5px 5px 0 0;
         }
     </style>
@@ -73,17 +80,22 @@
 <body style="margin: 0; overflow: hidden;">
 
     <div id="start-screen">
-        <h1>EFM Day Shooter</h1>
-        <p>Aim the yellow dot and spray water into the correct bucket!</p>
-        <button class="start-btn" onclick="startGame()">Tap to Start</button>
+        <h1 style="margin-bottom: 10px;">EFM Day Game</h1>
+        <p style="margin: 0 20px; opacity: 0.9; line-height: 1.5;">Aim the crosshair, then press and hold <strong>SPRAY WATER</strong> to fill the correct bucket.</p>
+        <button class="start-btn" onclick="startGame()">Start Playing</button>
     </div>
 
     <div class="ui-container" id="quiz-ui">
-        <h3 id="question-text" style="margin: 0; font-size: 16px;">Loading...</h3>
+        <h3 id="question-text">Loading...</h3>
     </div>
 
     <div id="arcade-controls">
-        <button id="shoot-btn">SPRAY<br>WATER</button>
+        <button id="shoot-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 21.5C16.1421 21.5 19.5 18.1421 19.5 14C19.5 9.5 12 2.5 12 2.5C12 2.5 4.5 9.5 4.5 14C4.5 18.1421 7.85786 21.5 12 21.5Z"/>
+            </svg>
+            SPRAY WATER
+        </button>
         <div id="fire-hose-visual">
             <div id="fire-hose-nozzle"></div>
             <div id="water-spout"></div>
@@ -95,75 +107,95 @@
         <a-camera position="0 0 0">
             <a-entity id="aim-raycaster" raycaster="objects: .clickable; showLine: false;" 
                       position="0 0 -1" geometry="primitive: ring; radiusInner: 0.015; radiusOuter: 0.025" 
-                      material="color: #FFB81C; shader: flat; opacity: 0.9"></a-entity>
+                      material="color: #FFB81C; shader: flat; opacity: 0.8"></a-entity>
+            
+            <a-entity id="water-particles">
+                <a-sphere class="water-drop" radius="0.03" color="#00BFFF" visible="false" material="opacity: 0.8; transparent: true; roughness: 0"></a-sphere>
+                <a-sphere class="water-drop" radius="0.04" color="#00A9CE" visible="false" material="opacity: 0.8; transparent: true; roughness: 0"></a-sphere>
+                <a-sphere class="water-drop" radius="0.03" color="#00BFFF" visible="false" material="opacity: 0.8; transparent: true; roughness: 0"></a-sphere>
+                <a-sphere class="water-drop" radius="0.05" color="#00A9CE" visible="false" material="opacity: 0.8; transparent: true; roughness: 0"></a-sphere>
+                <a-sphere class="water-drop" radius="0.03" color="#00BFFF" visible="false" material="opacity: 0.8; transparent: true; roughness: 0"></a-sphere>
+                <a-sphere class="water-drop" radius="0.04" color="#00A9CE" visible="false" material="opacity: 0.8; transparent: true; roughness: 0"></a-sphere>
+                <a-sphere class="water-drop" radius="0.03" color="#00BFFF" visible="false" material="opacity: 0.8; transparent: true; roughness: 0"></a-sphere>
+                <a-sphere class="water-drop" radius="0.05" color="#00A9CE" visible="false" material="opacity: 0.8; transparent: true; roughness: 0"></a-sphere>
+                <a-sphere class="water-drop" radius="0.03" color="#00BFFF" visible="false" material="opacity: 0.8; transparent: true; roughness: 0"></a-sphere>
+                <a-sphere class="water-drop" radius="0.04" color="#00A9CE" visible="false" material="opacity: 0.8; transparent: true; roughness: 0"></a-sphere>
+            </a-entity>
         </a-camera>
 
         <a-marker preset="hiro" id="ar-marker">
             <a-entity id="game-board">
                 
                 <a-entity class="clickable bucket-wrapper" id="bucket0" position="-1.5 0 0" geometry="primitive: cylinder; radius: 0.6; height: 1.5" material="opacity: 0; transparent: true">
-                    <a-cylinder class="bucket-shape" radius="0.5" height="1" color="#888888" material="side: double" open-ended="true"></a-cylinder>
-                    <a-circle radius="0.5" color="#555" position="0 -0.5 0" rotation="-90 0 0"></a-circle>
-                    <a-text class="box-text" value="Opt 1" position="0 1.2 0" align="center" width="4" color="white" look-at="[camera]"></a-text>
+                    <a-cylinder class="bucket-shape" radius="0.5" height="1" color="#E0E0E0" material="side: double; opacity: 0.9; roughness: 0.2" open-ended="true"></a-cylinder>
+                    <a-circle radius="0.5" color="#999" position="0 -0.5 0" rotation="-90 0 0"></a-circle>
+                    <a-text class="box-text" value="Opt 1" position="0 1.2 0" align="center" width="4.5" color="white" font="kelsonsans" look-at="[camera]"></a-text>
                     
-                    <a-cylinder class="water-stream" radius="0.08" height="4" color="#00BFFF" position="0 -4 4" rotation="-30 0 0" visible="false" material="opacity: 0.8; transparent: true"></a-cylinder>
-                    
-                    <a-text class="confetti" value="🎉" position="0 0 0" scale="4 4 4" align="center" visible="false" look-at="[camera]"></a-text>
-                    <a-text class="sad-face" value="😢" position="0 0 0" scale="4 4 4" align="center" visible="false" look-at="[camera]"></a-text>
+                    <a-text class="confetti" value="🎉" position="0 0 0" scale="5 5 5" align="center" visible="false" look-at="[camera]"></a-text>
+                    <a-text class="sad-face" value="😢" position="0 0 0" scale="5 5 5" align="center" visible="false" look-at="[camera]"></a-text>
                 </a-entity>
 
-                <a-entity class="clickable bucket-wrapper" id="bucket1" position="0 0 -1" geometry="primitive: cylinder; radius: 0.6; height: 1.5" material="opacity: 0; transparent: true">
-                    <a-cylinder class="bucket-shape" radius="0.5" height="1" color="#888888" material="side: double" open-ended="true"></a-cylinder>
-                    <a-circle radius="0.5" color="#555" position="0 -0.5 0" rotation="-90 0 0"></a-circle>
-                    <a-text class="box-text" value="Opt 2" position="0 1.2 0" align="center" width="4" color="white" look-at="[camera]"></a-text>
+                <a-entity class="clickable bucket-wrapper" id="bucket1" position="0 0 -1.2" geometry="primitive: cylinder; radius: 0.6; height: 1.5" material="opacity: 0; transparent: true">
+                    <a-cylinder class="bucket-shape" radius="0.5" height="1" color="#E0E0E0" material="side: double; opacity: 0.9; roughness: 0.2" open-ended="true"></a-cylinder>
+                    <a-circle radius="0.5" color="#999" position="0 -0.5 0" rotation="-90 0 0"></a-circle>
+                    <a-text class="box-text" value="Opt 2" position="0 1.2 0" align="center" width="4.5" color="white" font="kelsonsans" look-at="[camera]"></a-text>
                     
-                    <a-cylinder class="water-stream" radius="0.08" height="4" color="#00BFFF" position="0 -4 4" rotation="-30 0 0" visible="false" material="opacity: 0.8; transparent: true"></a-cylinder>
-                    
-                    <a-text class="confetti" value="🎉" position="0 0 0" scale="4 4 4" align="center" visible="false" look-at="[camera]"></a-text>
-                    <a-text class="sad-face" value="😢" position="0 0 0" scale="4 4 4" align="center" visible="false" look-at="[camera]"></a-text>
+                    <a-text class="confetti" value="🎉" position="0 0 0" scale="5 5 5" align="center" visible="false" look-at="[camera]"></a-text>
+                    <a-text class="sad-face" value="😢" position="0 0 0" scale="5 5 5" align="center" visible="false" look-at="[camera]"></a-text>
                 </a-entity>
 
                 <a-entity class="clickable bucket-wrapper" id="bucket2" position="1.5 0 0" geometry="primitive: cylinder; radius: 0.6; height: 1.5" material="opacity: 0; transparent: true">
-                    <a-cylinder class="bucket-shape" radius="0.5" height="1" color="#888888" material="side: double" open-ended="true"></a-cylinder>
-                    <a-circle radius="0.5" color="#555" position="0 -0.5 0" rotation="-90 0 0"></a-circle>
-                    <a-text class="box-text" value="Opt 3" position="0 1.2 0" align="center" width="4" color="white" look-at="[camera]"></a-text>
+                    <a-cylinder class="bucket-shape" radius="0.5" height="1" color="#E0E0E0" material="side: double; opacity: 0.9; roughness: 0.2" open-ended="true"></a-cylinder>
+                    <a-circle radius="0.5" color="#999" position="0 -0.5 0" rotation="-90 0 0"></a-circle>
+                    <a-text class="box-text" value="Opt 3" position="0 1.2 0" align="center" width="4.5" color="white" font="kelsonsans" look-at="[camera]"></a-text>
                     
-                    <a-cylinder class="water-stream" radius="0.08" height="4" color="#00BFFF" position="0 -4 4" rotation="-30 0 0" visible="false" material="opacity: 0.8; transparent: true"></a-cylinder>
-                    
-                    <a-text class="confetti" value="🎉" position="0 0 0" scale="4 4 4" align="center" visible="false" look-at="[camera]"></a-text>
-                    <a-text class="sad-face" value="😢" position="0 0 0" scale="4 4 4" align="center" visible="false" look-at="[camera]"></a-text>
+                    <a-text class="confetti" value="🎉" position="0 0 0" scale="5 5 5" align="center" visible="false" look-at="[camera]"></a-text>
+                    <a-text class="sad-face" value="😢" position="0 0 0" scale="5 5 5" align="center" visible="false" look-at="[camera]"></a-text>
                 </a-entity>
             </a-entity>
         </a-marker>
     </a-scene>
 
     <script>
+        // --- Smooth Audio Engine ---
         let audioCtx;
+        let hoseNoiseNode, hoseGainNode;
+
         function initAudio() {
             if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         }
 
-        // Hose Spray Sound
-        function playHoseSound(duration) {
+        // Creates a soft, continuous "shhhh" noise for the water
+        function startHoseSound() {
             if(!audioCtx) return;
-            const bufferSize = audioCtx.sampleRate * duration;
+            const bufferSize = audioCtx.sampleRate * 2; // 2 seconds of noise
             const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
             const data = buffer.getChannelData(0);
-            for (let i = 0; i < bufferSize; i++) {
-                data[i] = Math.random() * 2 - 1; 
-            }
-            const noise = audioCtx.createBufferSource();
-            noise.buffer = buffer;
+            for (let i = 0; i < bufferSize; i++) { data[i] = Math.random() * 2 - 1; }
+            
+            hoseNoiseNode = audioCtx.createBufferSource();
+            hoseNoiseNode.buffer = buffer;
+            hoseNoiseNode.loop = true; // Loops forever until stopped
+            
             const filter = audioCtx.createBiquadFilter();
             filter.type = 'lowpass'; 
-            filter.frequency.value = 600; 
-            const gain = audioCtx.createGain();
-            gain.gain.setValueAtTime(1, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
-            noise.connect(filter);
-            filter.connect(gain);
-            gain.connect(audioCtx.destination);
-            noise.start();
+            filter.frequency.value = 500; // Makes it sound like water, not static
+            
+            hoseGainNode = audioCtx.createGain();
+            hoseGainNode.gain.setValueAtTime(0, audioCtx.currentTime); // Start silent
+            hoseGainNode.gain.linearRampToValueAtTime(0.5, audioCtx.currentTime + 0.1); // Fade in
+            
+            hoseNoiseNode.connect(filter);
+            filter.connect(hoseGainNode);
+            hoseGainNode.connect(audioCtx.destination);
+            hoseNoiseNode.start();
+        }
+
+        function stopHoseSound() {
+            if(hoseGainNode && hoseNoiseNode) {
+                hoseGainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.1); // Fade out gently
+                setTimeout(() => { if(hoseNoiseNode) hoseNoiseNode.stop(); }, 100);
+            }
         }
 
         function playTone(freq, type, duration) {
@@ -173,13 +205,14 @@
             osc.type = type; osc.frequency.value = freq;
             osc.connect(gain); gain.connect(audioCtx.destination);
             osc.start();
-            gain.gain.setValueAtTime(1, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
             gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
             setTimeout(() => osc.stop(), duration * 1000);
         }
-        function playDing() { playTone(800, 'sine', 0.1); setTimeout(() => playTone(1200, 'sine', 0.3), 100); }
+        function playDing() { playTone(800, 'sine', 0.1); setTimeout(() => playTone(1200, 'sine', 0.4), 100); }
         function playBuzzer() { playTone(150, 'sawtooth', 0.4); }
 
+        // --- Game Logic ---
         const quizData = [
             { question: "What does EFM stand for?", options: ["Estates &\nFacilities", "Engineering &\nFinance", "Essential\nMaintenance"], answer: 0 },
             { question: "How long is a Level 3 Apprenticeship?", options: ["6 months", "12 months", "18-24\nmonths"], answer: 2 },
@@ -189,6 +222,8 @@
         let currentQ = 0;
         let score = 0;
         let isWaiting = false;
+        let isSpraying = false;
+        let fillProgress = 0; // How long the bucket has been sprayed
 
         const marker = document.querySelector('#ar-marker');
         const quizUI = document.querySelector('#quiz-ui');
@@ -201,9 +236,69 @@
 
         const shapes = document.querySelectorAll('.bucket-shape');
         const texts = document.querySelectorAll('.box-text');
-        const streams = document.querySelectorAll('.water-stream');
         const confettis = document.querySelectorAll('.confetti');
         const sadFaces = document.querySelectorAll('.sad-face');
+
+        // --- Continuous Particle Engine ---
+        const drops = Array.from(document.querySelectorAll('.water-drop')).map(el => ({
+            el: el, isActive: false, progress: 0, offsetX: 0, offsetY: 0
+        }));
+
+        function renderParticles() {
+            if (isSpraying) {
+                // Spawn a new drop occasionally
+                if (Math.random() > 0.4) {
+                    let drop = drops.find(d => !d.isActive);
+                    if (drop) {
+                        drop.isActive = true;
+                        drop.el.setAttribute('visible', 'true');
+                        drop.progress = 0;
+                        // Add a slight random spread to the nozzle
+                        drop.offsetX = (Math.random() - 0.5) * 0.15;
+                        drop.offsetY = (Math.random() - 0.5) * 0.15;
+                    }
+                }
+
+                // Check if aiming at a bucket to fill it
+                if (!isWaiting) {
+                    const hits = aimRaycaster.components.raycaster.intersectedEls;
+                    if (hits.length > 0) {
+                        fillProgress += 16; // rough MS per frame
+                        // If sprayed continuously for 600ms, register the answer!
+                        if (fillProgress > 600) {
+                            processAnswer(hits[0]);
+                        }
+                    } else {
+                        fillProgress = 0; // reset if they aim away
+                    }
+                }
+            } else {
+                fillProgress = 0;
+            }
+
+            // Move the active drops forward
+            drops.forEach(drop => {
+                if (drop.isActive) {
+                    drop.progress += 0.08; // speed of water
+                    
+                    let x = drop.offsetX * drop.progress;
+                    let y = -0.5 + (drop.progress * 0.2) + drop.offsetY; // arcs slightly up
+                    let z = -0.5 - (drop.progress * 5); // flies straight forward into the 3D scene
+                    
+                    drop.el.setAttribute('position', `${x} ${y} ${z}`);
+
+                    // Hide drop once it flies far enough
+                    if (drop.progress > 1) {
+                        drop.isActive = false;
+                        drop.el.setAttribute('visible', 'false');
+                    }
+                }
+            });
+
+            requestAnimationFrame(renderParticles);
+        }
+        requestAnimationFrame(renderParticles);
+
 
         function startGame() {
             document.querySelector('#start-screen').style.display = 'none';
@@ -213,7 +308,7 @@
         marker.addEventListener('markerFound', () => {
             if (currentQ < quizData.length) {
                 quizUI.style.display = 'block';
-                arcadeControls.style.display = 'flex';
+                arcadeControls.style.display = 'block';
                 if (!isWaiting) loadQuestion();
             }
         });
@@ -221,81 +316,88 @@
         marker.addEventListener('markerLost', () => {
             quizUI.style.display = 'none';
             arcadeControls.style.display = 'none';
+            // Stop spray if they lose tracking
+            if(isSpraying) {
+                isSpraying = false;
+                stopHoseSound();
+                fireHoseVisual.classList.remove('hose-firing');
+            }
         });
 
         function loadQuestion() {
             isWaiting = false;
+            fillProgress = 0;
             const q = quizData[currentQ];
             questionText.innerText = q.question;
             
             shapes.forEach((shape, i) => {
-                shape.setAttribute('color', '#888888');
+                shape.setAttribute('color', '#E0E0E0');
                 texts[i].setAttribute('value', q.options[i]);
                 confettis[i].setAttribute('visible', 'false');
                 confettis[i].removeAttribute('animation');
                 sadFaces[i].setAttribute('visible', 'false');
                 sadFaces[i].removeAttribute('animation');
-                streams[i].setAttribute('visible', 'false');
-                streams[i].removeAttribute('animation');
             });
         }
 
-        shootBtn.addEventListener('click', () => {
+        // --- Interaction Handlers (Touch & Mouse) ---
+        function startSpray(e) {
+            e.preventDefault();
             if (isWaiting) return;
-            
-            const hits = aimRaycaster.components.raycaster.intersectedEls;
-            
+            isSpraying = true;
             fireHoseVisual.classList.add('hose-firing');
-            setTimeout(() => fireHoseVisual.classList.remove('hose-firing'), 150);
+            startHoseSound();
+        }
 
-            if (hits.length === 0) {
-                playHoseSound(0.2); 
-                return; 
-            }
-            
+        function stopSpray(e) {
+            e.preventDefault();
+            isSpraying = false;
+            fireHoseVisual.classList.remove('hose-firing');
+            stopHoseSound();
+        }
+
+        shootBtn.addEventListener('mousedown', startSpray);
+        shootBtn.addEventListener('touchstart', startSpray, {passive: false});
+        
+        window.addEventListener('mouseup', stopSpray);
+        window.addEventListener('touchend', stopSpray);
+
+
+        function processAnswer(targetBucket) {
             isWaiting = true;
-            playHoseSound(0.5); 
+            isSpraying = false;
+            stopHoseSound();
+            fireHoseVisual.classList.remove('hose-firing');
             
-            const targetBucket = hits[0];
             const index = parseInt(targetBucket.id.replace('bucket', ''));
 
-            // The solid jet of water animates directly into the bucket
-            const stream = streams[index];
-            stream.setAttribute('visible', 'true');
-            stream.setAttribute('animation', 'property: position; from: 0 -4 4; to: 0 0 0; dur: 350; easing: linear');
+            if (index === quizData[currentQ].answer) {
+                score++;
+                playDing();
+                shapes[index].setAttribute('color', '#00A9CE'); 
+                confettis[index].setAttribute('visible', 'true');
+                confettis[index].setAttribute('animation', 'property: position; from: 0 0 0; to: 0 1.5 0; dur: 800; easing: easeOutQuad');
+            } else {
+                playBuzzer();
+                shapes[index].setAttribute('color', '#DA291C'); 
+                sadFaces[index].setAttribute('visible', 'true');
+                sadFaces[index].setAttribute('animation', 'property: position; from: 0 0 0; to: 0 1.5 0; dur: 800; easing: easeOutQuad');
 
+                const correctIdx = quizData[currentQ].answer;
+                shapes[correctIdx].setAttribute('color', '#00A9CE');
+            }
+            
             setTimeout(() => {
-                stream.setAttribute('visible', 'false');
-
-                if (index === quizData[currentQ].answer) {
-                    score++;
-                    playDing();
-                    shapes[index].setAttribute('color', '#00A9CE'); 
-                    confettis[index].setAttribute('visible', 'true');
-                    confettis[index].setAttribute('animation', 'property: position; from: 0 0 0; to: 0 1.5 0; dur: 800; easing: easeOutQuad');
+                currentQ++;
+                if (currentQ < quizData.length) {
+                    loadQuestion();
                 } else {
-                    playBuzzer();
-                    shapes[index].setAttribute('color', '#DA291C'); 
-                    sadFaces[index].setAttribute('visible', 'true');
-                    sadFaces[index].setAttribute('animation', 'property: position; from: 0 0 0; to: 0 1.5 0; dur: 800; easing: easeOutQuad');
-
-                    const correctIdx = quizData[currentQ].answer;
-                    shapes[correctIdx].setAttribute('color', '#00A9CE');
+                    quizUI.innerHTML = `<h3 style="margin: 0; font-size: 18px; color: #005EB8;">Game Over!</h3><p style="margin: 10px 0 0 0; font-weight: bold;">Your score: ${score} / ${quizData.length}</p>`;
+                    arcadeControls.style.display = 'none';
+                    document.querySelector('#game-board').setAttribute('visible', 'false');
                 }
-                
-                setTimeout(() => {
-                    currentQ++;
-                    if (currentQ < quizData.length) {
-                        loadQuestion();
-                    } else {
-                        quizUI.innerHTML = `<h3 style="margin: 0; font-size: 16px;">Game Over!</h3><p style="margin: 5px 0 0 0;">Your score: ${score} / ${quizData.length}</p>`;
-                        arcadeControls.style.display = 'none';
-                        document.querySelector('#game-board').setAttribute('visible', 'false');
-                    }
-                }, 2500); 
-                
-            }, 350); 
-        });
+            }, 2500); 
+        }
     </script>
 </body>
 </html>
