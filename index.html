@@ -146,6 +146,54 @@
             width: 20px; height: 14px; background: #222;
             border-radius: 7px 7px 0 0;
         }
+
+        #hose-water-stream {
+            position: absolute;
+            left: 50%;
+            top: -168px;
+            transform: translateX(-50%);
+            width: 54px;
+            height: 145px;
+            opacity: 0;
+            pointer-events: none;
+            overflow: visible;
+            transition: opacity 0.08s ease-out;
+        }
+        #fire-hose-visual.hose-firing #hose-water-stream { opacity: 1; }
+        .stream-core {
+            position: absolute;
+            left: 50%;
+            bottom: 0;
+            transform: translateX(-50%);
+            width: 11px;
+            height: 138px;
+            border-radius: 999px;
+            background: linear-gradient(to top, rgba(0,191,255,0.9), rgba(111,220,255,0.62), rgba(255,255,255,0));
+            filter: blur(0.3px);
+            animation: waterPulse 0.18s linear infinite;
+        }
+        .stream-drop {
+            position: absolute;
+            left: 50%;
+            bottom: 4px;
+            width: 7px;
+            height: 12px;
+            border-radius: 999px;
+            background: rgba(142, 229, 255, 0.88);
+            box-shadow: 0 0 8px rgba(0, 191, 255, 0.45);
+            opacity: 0;
+            animation: sprayDrop 0.58s linear infinite;
+            animation-delay: var(--delay);
+        }
+        @keyframes waterPulse {
+            0%, 100% { transform: translateX(-50%) scaleX(0.82); opacity: 0.72; }
+            50% { transform: translateX(-50%) scaleX(1.18); opacity: 0.95; }
+        }
+        @keyframes sprayDrop {
+            0% { transform: translate(-50%, 0) scale(0.75); opacity: 0; }
+            12% { opacity: 0.92; }
+            100% { transform: translate(calc(-50% + var(--x)), calc(-1 * var(--rise))) scale(0.35); opacity: 0; }
+        }
     </style>
 </head>
 <body style="margin: 0; overflow: hidden;">
@@ -182,6 +230,15 @@
         <div id="fire-hose-visual">
             <div id="fire-hose-nozzle"></div>
             <div id="water-spout"></div>
+            <div id="hose-water-stream" aria-hidden="true">
+                <span class="stream-core"></span>
+                <span class="stream-drop" style="--x:-8px; --rise:125px; --delay:-0.02s;"></span>
+                <span class="stream-drop" style="--x:6px; --rise:132px; --delay:-0.12s;"></span>
+                <span class="stream-drop" style="--x:-3px; --rise:118px; --delay:-0.22s;"></span>
+                <span class="stream-drop" style="--x:11px; --rise:140px; --delay:-0.31s;"></span>
+                <span class="stream-drop" style="--x:-12px; --rise:136px; --delay:-0.40s;"></span>
+                <span class="stream-drop" style="--x:2px; --rise:128px; --delay:-0.50s;"></span>
+            </div>
         </div>
     </div>
 
@@ -240,56 +297,189 @@
     <script>
         let audioCtx;
         let hoseNoiseNode, hoseGainNode;
+        let hoseFilterNodes = [];
+        let cachedWaterNoiseBuffer = null;
 
         function initAudio() {
             if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            resumeAudio();
+        }
+
+        function resumeAudio() {
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function getWaterNoiseBuffer() {
+            if (!audioCtx) return null;
+            if (cachedWaterNoiseBuffer) return cachedWaterNoiseBuffer;
+
+            const bufferSize = audioCtx.sampleRate * 2;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            let last = 0;
+
+            // Slightly softened noise, closer to water than harsh static.
+            for (let i = 0; i < bufferSize; i++) {
+                const white = Math.random() * 2 - 1;
+                last = (last * 0.82) + (white * 0.18);
+                data[i] = last;
+            }
+
+            cachedWaterNoiseBuffer = buffer;
+            return buffer;
+        }
+
+        function playNoiseBurst(duration, volume, filterType, frequency) {
+            if (!audioCtx) return;
+            resumeAudio();
+
+            const now = audioCtx.currentTime;
+            const bufferSize = Math.max(1, Math.floor(audioCtx.sampleRate * duration));
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+
+            for (let i = 0; i < bufferSize; i++) {
+                const fade = 1 - (i / bufferSize);
+                data[i] = (Math.random() * 2 - 1) * fade;
+            }
+
+            const src = audioCtx.createBufferSource();
+            src.buffer = buffer;
+
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = filterType;
+            filter.frequency.value = frequency;
+            filter.Q.value = 0.8;
+
+            const gain = audioCtx.createGain();
+            gain.gain.setValueAtTime(volume, now);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+            src.connect(filter);
+            filter.connect(gain);
+            gain.connect(audioCtx.destination);
+            src.start(now);
         }
 
         function startHoseSound() {
             if(!audioCtx) return;
-            const bufferSize = audioCtx.sampleRate * 2; 
-            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-            const data = buffer.getChannelData(0);
-            for (let i = 0; i < bufferSize; i++) { data[i] = Math.random() * 2 - 1; }
-            
-            hoseNoiseNode = audioCtx.createBufferSource();
-            hoseNoiseNode.buffer = buffer;
-            hoseNoiseNode.loop = true; 
-            
-            const filter = audioCtx.createBiquadFilter();
-            filter.type = 'lowpass'; 
-            filter.frequency.value = 500; 
-            
-            hoseGainNode = audioCtx.createGain();
-            hoseGainNode.gain.setValueAtTime(0, audioCtx.currentTime); 
-            hoseGainNode.gain.linearRampToValueAtTime(0.5, audioCtx.currentTime + 0.1); 
-            
-            hoseNoiseNode.connect(filter);
-            filter.connect(hoseGainNode);
-            hoseGainNode.connect(audioCtx.destination);
-            hoseNoiseNode.start();
+            resumeAudio();
+            if (hoseNoiseNode) return;
+
+            const now = audioCtx.currentTime;
+            const src = audioCtx.createBufferSource();
+            src.buffer = getWaterNoiseBuffer();
+            src.loop = true;
+
+            const lowpass = audioCtx.createBiquadFilter();
+            lowpass.type = 'lowpass';
+            lowpass.frequency.value = 2600;
+            lowpass.Q.value = 0.7;
+
+            const bandpass = audioCtx.createBiquadFilter();
+            bandpass.type = 'bandpass';
+            bandpass.frequency.value = 850;
+            bandpass.Q.value = 0.55;
+
+            const gain = audioCtx.createGain();
+            gain.gain.setValueAtTime(0.0001, now);
+            gain.gain.exponentialRampToValueAtTime(0.28, now + 0.12);
+
+            src.connect(lowpass);
+            lowpass.connect(bandpass);
+            bandpass.connect(gain);
+            gain.connect(audioCtx.destination);
+            src.start(now);
+
+            hoseNoiseNode = src;
+            hoseGainNode = gain;
+            hoseFilterNodes = [lowpass, bandpass];
+
+            // Small splash at the start so it feels less flat.
+            playNoiseBurst(0.09, 0.16, 'highpass', 1400);
         }
 
         function stopHoseSound() {
-            if(hoseGainNode && hoseNoiseNode) {
-                hoseGainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.1); 
-                setTimeout(() => { if(hoseNoiseNode) hoseNoiseNode.stop(); }, 100);
+            if(hoseGainNode && hoseNoiseNode && audioCtx) {
+                const now = audioCtx.currentTime;
+                const src = hoseNoiseNode;
+                const gain = hoseGainNode;
+
+                gain.gain.cancelScheduledValues(now);
+                gain.gain.setValueAtTime(Math.max(gain.gain.value, 0.0001), now);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.14);
+
+                setTimeout(() => {
+                    try { src.stop(); } catch(e) {}
+                }, 170);
+
+                hoseNoiseNode = null;
+                hoseGainNode = null;
+                hoseFilterNodes = [];
             }
         }
 
-        function playTone(freq, type, duration) {
+        function playCleanTone(freq, type, startOffset, duration, volume) {
             if(!audioCtx) return;
+            const now = audioCtx.currentTime;
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
-            osc.type = type; osc.frequency.value = freq;
-            osc.connect(gain); gain.connect(audioCtx.destination);
-            osc.start();
-            gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
-            setTimeout(() => osc.stop(), duration * 1000);
+            const filter = audioCtx.createBiquadFilter();
+
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, now + startOffset);
+            filter.type = 'lowpass';
+            filter.frequency.value = 5200;
+            gain.gain.setValueAtTime(0.0001, now + startOffset);
+            gain.gain.exponentialRampToValueAtTime(volume, now + startOffset + 0.018);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + startOffset + duration);
+
+            osc.connect(filter);
+            filter.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(now + startOffset);
+            osc.stop(now + startOffset + duration + 0.03);
         }
-        function playDing() { playTone(800, 'sine', 0.1); setTimeout(() => playTone(1200, 'sine', 0.4), 100); }
-        function playBuzzer() { playTone(150, 'sawtooth', 0.4); }
+
+        function playDing() {
+            if(!audioCtx) return;
+            resumeAudio();
+            // Soft modern success sparkle.
+            playCleanTone(523.25, 'sine', 0.00, 0.20, 0.12);
+            playCleanTone(659.25, 'sine', 0.05, 0.22, 0.11);
+            playCleanTone(783.99, 'sine', 0.10, 0.25, 0.10);
+            playCleanTone(1046.5, 'triangle', 0.16, 0.28, 0.07);
+            playNoiseBurst(0.08, 0.035, 'highpass', 4200);
+        }
+
+        function playBuzzer() {
+            if(!audioCtx) return;
+            resumeAudio();
+            // Softer negative sound: more app-like, less old arcade buzzer.
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            const filter = audioCtx.createBiquadFilter();
+
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(190, now);
+            osc.frequency.exponentialRampToValueAtTime(92, now + 0.26);
+            filter.type = 'lowpass';
+            filter.frequency.value = 900;
+            gain.gain.setValueAtTime(0.0001, now);
+            gain.gain.exponentialRampToValueAtTime(0.20, now + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.32);
+
+            osc.connect(filter);
+            filter.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(now);
+            osc.stop(now + 0.36);
+
+            playNoiseBurst(0.11, 0.06, 'lowpass', 650);
+        }
 
         const quizData = [
             { question: "What does EFM stand for?", options: ["Estates &\nFacilities", "Engineering &\nFinance", "Essential\nMaintenance"], answer: 0 },
@@ -341,51 +531,22 @@
         }));
 
         function renderParticles() {
-            if (isSpraying) {
-                if (Math.random() > 0.4) {
-                    let drop = drops.find(d => !d.isActive);
-                    if (drop) {
-                        drop.isActive = true;
-                        drop.el.setAttribute('visible', 'true');
-                        drop.progress = 0;
-                        // Narrow spread: every drop starts at the same nozzle origin,
-                        // then fans out very slightly as it travels towards the crosshair.
-                        drop.offsetX = (Math.random() - 0.5) * 0.18;
-                        drop.offsetY = (Math.random() - 0.5) * 0.10;
+            // The visible spray is now a 2D layer attached to the hose nozzle.
+            // This keeps the water visually locked to the hose while the AR raycaster
+            // still handles whether the crosshair is aimed at a bucket.
+            if (isSpraying && !isWaiting) {
+                const hits = aimRaycaster.components.raycaster.intersectedEls;
+                if (hits.length > 0) {
+                    fillProgress += 16;
+                    if (fillProgress > 600) {
+                        processAnswer(hits[0]);
                     }
-                }
-
-                if (!isWaiting) {
-                    const hits = aimRaycaster.components.raycaster.intersectedEls;
-                    if (hits.length > 0) {
-                        fillProgress += 16; 
-                        if (fillProgress > 600) {
-                            processAnswer(hits[0]);
-                        }
-                    } else {
-                        fillProgress = 0; 
-                    }
+                } else {
+                    fillProgress = 0;
                 }
             } else {
                 fillProgress = 0;
             }
-
-            drops.forEach(drop => {
-                if (drop.isActive) {
-                    drop.progress += 0.08; 
-                    
-                    let x = drop.offsetX * drop.progress;
-                    let y = (drop.progress * 0.65) + (drop.offsetY * drop.progress);
-                    let z = -(drop.progress * 5);
-                    
-                    drop.el.setAttribute('position', `${x} ${y} ${z}`);
-
-                    if (drop.progress > 1) {
-                        drop.isActive = false;
-                        drop.el.setAttribute('visible', 'false');
-                    }
-                }
-            });
 
             requestAnimationFrame(renderParticles);
         }
@@ -439,7 +600,8 @@
         // Extremely safe mobile touch handlers
         function startSpray(e) {
             e.preventDefault();
-            if (isWaiting) return;
+            if (isWaiting || !hasStarted || !markerIsVisible) return;
+            if (!audioCtx) initAudio();
             isSpraying = true;
             fireHoseVisual.classList.add('hose-firing');
             startHoseSound();
