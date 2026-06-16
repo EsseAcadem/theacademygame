@@ -13,7 +13,7 @@
         body, html { 
             margin: 0; overflow: hidden; width: 100%; height: 100%; 
             font-family: 'Inter', -apple-system, sans-serif; 
-            -webkit-user-select: none; user-select: none; /* Stops text highlighting on long press */
+            -webkit-user-select: none; user-select: none; 
         }
 
         #start-screen {
@@ -21,7 +21,7 @@
             background: linear-gradient(135deg, #005EB8, #00A9CE);
             display: flex; flex-direction: column; justify-content: center; align-items: center; 
             z-index: 9999; color: white; text-align: center; padding: 20px; box-sizing: border-box;
-            touch-action: none; /* Forces mobile to treat this as a solid tap area */
+            touch-action: none; 
         }
         #start-btn {
             padding: 16px 40px; font-size: 18px; background: white; color: #005EB8;
@@ -32,7 +32,6 @@
         #start-btn:active { transform: scale(0.95); }
         
         .ui-container {
-            /* env() handles the iPhone notch */
             position: absolute; top: max(5%, env(safe-area-inset-top)); 
             left: 50%; transform: translateX(-50%);
             width: 90%; max-width: 450px; 
@@ -44,7 +43,6 @@
         #question-text { margin: 0; font-size: 18px; color: #111; font-weight: 700; line-height: 1.4; }
         
         #arcade-controls {
-            /* env() handles the iPhone bottom home bar */
             position: absolute; bottom: 0; left: 0; width: 100%; 
             height: calc(140px + env(safe-area-inset-bottom));
             z-index: 30; display: none; pointer-events: none;
@@ -86,7 +84,7 @@
 
     <div id="start-screen">
         <h1 style="margin-bottom: 10px;">EFM Day Game</h1>
-        <p style="margin: 0 20px; opacity: 0.9; line-height: 1.5;">Aim the crosshair, then press and hold <strong>SPRAY WATER</strong> to fill the correct bucket.</p>
+        <p style="margin: 0 20px; opacity: 0.9; line-height: 1.5;">Aim the yellow crosshair, then press and hold <strong>SPRAY WATER</strong> to fill the correct bucket.</p>
         <button id="start-btn">Start Playing</button>
     </div>
 
@@ -129,7 +127,9 @@
         <a-marker preset="hiro" id="ar-marker">
             <a-entity id="game-board">
                 
-                <a-entity class="clickable bucket-wrapper" id="bucket0" position="-1.1 0 0" geometry="primitive: cylinder; radius: 0.5; height: 1.5" material="opacity: 0; transparent: true">
+                <a-entity class="bucket-wrapper" id="bucket0" position="-1.1 0 0">
+                    <a-cylinder class="clickable hitbox" radius="0.6" height="1.5" position="0 0.2 0" material="visible: false"></a-cylinder>
+                    
                     <a-cylinder class="bucket-shape" radius="0.45" height="1" color="#E0E0E0" material="side: double; opacity: 0.9; roughness: 0.2" open-ended="true"></a-cylinder>
                     <a-circle radius="0.45" color="#999" position="0 -0.5 0" rotation="-90 0 0"></a-circle>
                     <a-text class="box-text" value="Opt 1" position="0 1.2 0" align="center" width="4" color="white" font="kelsonsans" look-at="[camera]"></a-text>
@@ -138,7 +138,9 @@
                     <a-text class="sad-face" value="😢" position="0 0 0" scale="5 5 5" align="center" visible="false" look-at="[camera]"></a-text>
                 </a-entity>
 
-                <a-entity class="clickable bucket-wrapper" id="bucket1" position="0 0 -1" geometry="primitive: cylinder; radius: 0.5; height: 1.5" material="opacity: 0; transparent: true">
+                <a-entity class="bucket-wrapper" id="bucket1" position="0 0 -1">
+                    <a-cylinder class="clickable hitbox" radius="0.6" height="1.5" position="0 0.2 0" material="visible: false"></a-cylinder>
+                    
                     <a-cylinder class="bucket-shape" radius="0.45" height="1" color="#E0E0E0" material="side: double; opacity: 0.9; roughness: 0.2" open-ended="true"></a-cylinder>
                     <a-circle radius="0.45" color="#999" position="0 -0.5 0" rotation="-90 0 0"></a-circle>
                     <a-text class="box-text" value="Opt 2" position="0 1.2 0" align="center" width="4" color="white" font="kelsonsans" look-at="[camera]"></a-text>
@@ -147,7 +149,9 @@
                     <a-text class="sad-face" value="😢" position="0 0 0" scale="5 5 5" align="center" visible="false" look-at="[camera]"></a-text>
                 </a-entity>
 
-                <a-entity class="clickable bucket-wrapper" id="bucket2" position="1.1 0 0" geometry="primitive: cylinder; radius: 0.5; height: 1.5" material="opacity: 0; transparent: true">
+                <a-entity class="bucket-wrapper" id="bucket2" position="1.1 0 0">
+                    <a-cylinder class="clickable hitbox" radius="0.6" height="1.5" position="0 0.2 0" material="visible: false"></a-cylinder>
+                    
                     <a-cylinder class="bucket-shape" radius="0.45" height="1" color="#E0E0E0" material="side: double; opacity: 0.9; roughness: 0.2" open-ended="true"></a-cylinder>
                     <a-circle radius="0.45" color="#999" position="0 -0.5 0" rotation="-90 0 0"></a-circle>
                     <a-text class="box-text" value="Opt 3" position="0 1.2 0" align="center" width="4" color="white" font="kelsonsans" look-at="[camera]"></a-text>
@@ -224,7 +228,7 @@
         let isWaiting = false;
         let isSpraying = false;
         let fillProgress = 0; 
-        let hasStarted = false; // Prevents double firing
+        let hasStarted = false; 
 
         const marker = document.querySelector('#ar-marker');
         const quizUI = document.querySelector('#quiz-ui');
@@ -236,12 +240,14 @@
         const fireHoseVisual = document.querySelector('#fire-hose-visual');
         const aimRaycaster = document.querySelector('#aim-raycaster');
 
+        // Note: Target arrays point to wrapper children now
+        const wrappers = [document.querySelector('#bucket0'), document.querySelector('#bucket1'), document.querySelector('#bucket2')];
         const shapes = document.querySelectorAll('.bucket-shape');
         const texts = document.querySelectorAll('.box-text');
         const confettis = document.querySelectorAll('.confetti');
         const sadFaces = document.querySelectorAll('.sad-face');
 
-        // Robust mobile start button
+        // Robust mobile start sequence
         function runStartSequence(e) {
             if(e) e.preventDefault();
             if(hasStarted) return;
@@ -288,9 +294,10 @@
                 if (drop.isActive) {
                     drop.progress += 0.08; 
                     
+                    // FIXED: Lowered spawn origin (Y: -1.2) to match physical 2D nozzle
                     let x = drop.offsetX * drop.progress;
-                    let y = -0.5 + (drop.progress * 0.2) + drop.offsetY; 
-                    let z = -0.5 - (drop.progress * 5); 
+                    let y = -1.2 + (drop.progress * 1.5) + drop.offsetY; // Smooth arc upwards
+                    let z = -0.3 - (drop.progress * 5); // Shoots forward into 3D scene
                     
                     drop.el.setAttribute('position', `${x} ${y} ${z}`);
 
@@ -336,7 +343,6 @@
             });
         }
 
-        // Extremely safe mobile touch handlers
         function startSpray(e) {
             e.preventDefault();
             if (isWaiting) return;
@@ -363,11 +369,13 @@
         window.addEventListener('touchend', stopSpray);
 
 
-        function processAnswer(targetBucket) {
+        function processAnswer(targetHitbox) {
             isWaiting = true;
             stopSprayMobileSafe();
             
-            const index = parseInt(targetBucket.id.replace('bucket', ''));
+            // The hitbox is a child, so we get its parent ID
+            const parentWrapper = targetHitbox.parentElement;
+            const index = parseInt(parentWrapper.id.replace('bucket', ''));
 
             if (index === quizData[currentQ].answer) {
                 score++;
