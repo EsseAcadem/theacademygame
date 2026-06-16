@@ -53,6 +53,10 @@
             background: linear-gradient(to right, #444, #777, #444);
             border: 4px solid #222; border-bottom: none;
             border-radius: 15px 15px 0 0;
+            transition: transform 0.1s;
+        }
+        .hose-firing {
+            transform: translateX(-50%) translateY(10px) !important;
         }
         #fire-hose-nozzle {
             position: absolute; top: -20px; left: -2px;
@@ -89,53 +93,56 @@
     <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
         
         <a-camera position="0 0 0">
-            <a-entity id="aim-ring" cursor="rayOrigin: entity" raycaster="objects: .clickable" 
-                      position="0 0 -1" geometry="primitive: ring; radiusInner: 0.005; radiusOuter: 0.01" 
-                      material="color: white; shader: flat; opacity: 0.5"></a-entity>
+            <a-entity id="aim-raycaster" raycaster="objects: .clickable; showLine: false;" 
+                      position="0 0 -1" geometry="primitive: ring; radiusInner: 0.01; radiusOuter: 0.02" 
+                      material="color: #FFB81C; shader: flat; opacity: 0.8"></a-entity>
         </a-camera>
 
         <a-marker preset="hiro" id="ar-marker">
             <a-entity id="game-board">
                 
-                <a-entity class="clickable bucket-wrapper" id="bucket0" position="-1.5 0 0">
+                <a-entity class="clickable bucket-wrapper" id="bucket0" position="-1.5 0 0" geometry="primitive: cylinder; radius: 0.6; height: 1.5" material="visible: false">
                     <a-cylinder class="bucket-shape" radius="0.5" height="1" color="#888888" material="side: double" open-ended="true"></a-cylinder>
                     <a-circle radius="0.5" color="#555" position="0 -0.5 0" rotation="-90 0 0"></a-circle>
                     <a-text class="box-text" value="Opt 1" position="0 1.2 0" align="center" width="4" color="white" look-at="[camera]"></a-text>
                     
                     <a-entity class="water-stream" visible="false">
-                        <a-sphere radius="0.1" color="#00BFFF" position="0 0 0"></a-sphere>
-                        <a-sphere radius="0.1" color="#00BFFF" position="0 0.3 0"></a-sphere>
-                        <a-sphere radius="0.1" color="#00BFFF" position="0 0.6 0"></a-sphere>
+                        <a-sphere radius="0.15" color="#00BFFF" position="0 0 0" opacity="0.8"></a-sphere>
+                        <a-sphere radius="0.15" color="#00BFFF" position="0 0.4 0.4" opacity="0.8"></a-sphere>
+                        <a-sphere radius="0.15" color="#00BFFF" position="0 0.8 0.8" opacity="0.8"></a-sphere>
+                        <a-sphere radius="0.15" color="#00BFFF" position="0 1.2 1.2" opacity="0.8"></a-sphere>
                     </a-entity>
                     
                     <a-text class="confetti" value="🎉" position="0 0 0" scale="4 4 4" align="center" visible="false" look-at="[camera]"></a-text>
                     <a-text class="sad-face" value="😢" position="0 0 0" scale="4 4 4" align="center" visible="false" look-at="[camera]"></a-text>
                 </a-entity>
 
-                <a-entity class="clickable bucket-wrapper" id="bucket1" position="0 0 -1">
+                <a-entity class="clickable bucket-wrapper" id="bucket1" position="0 0 -1" geometry="primitive: cylinder; radius: 0.6; height: 1.5" material="visible: false">
                     <a-cylinder class="bucket-shape" radius="0.5" height="1" color="#888888" material="side: double" open-ended="true"></a-cylinder>
                     <a-circle radius="0.5" color="#555" position="0 -0.5 0" rotation="-90 0 0"></a-circle>
                     <a-text class="box-text" value="Opt 2" position="0 1.2 0" align="center" width="4" color="white" look-at="[camera]"></a-text>
                     
                     <a-entity class="water-stream" visible="false">
-                        <a-sphere radius="0.1" color="#00BFFF" position="0 0 0"></a-sphere>
-                        <a-sphere radius="0.1" color="#00BFFF" position="0 0.3 0"></a-sphere>
-                        <a-sphere radius="0.1" color="#00BFFF" position="0 0.6 0"></a-sphere>
+                        <a-sphere radius="0.15" color="#00BFFF" position="0 0 0" opacity="0.8"></a-sphere>
+                        <a-sphere radius="0.15" color="#00BFFF" position="0 0.4 0.4" opacity="0.8"></a-sphere>
+                        <a-sphere radius="0.15" color="#00BFFF" position="0 0.8 0.8" opacity="0.8"></a-sphere>
+                        <a-sphere radius="0.15" color="#00BFFF" position="0 1.2 1.2" opacity="0.8"></a-sphere>
                     </a-entity>
                     
                     <a-text class="confetti" value="🎉" position="0 0 0" scale="4 4 4" align="center" visible="false" look-at="[camera]"></a-text>
                     <a-text class="sad-face" value="😢" position="0 0 0" scale="4 4 4" align="center" visible="false" look-at="[camera]"></a-text>
                 </a-entity>
 
-                <a-entity class="clickable bucket-wrapper" id="bucket2" position="1.5 0 0">
+                <a-entity class="clickable bucket-wrapper" id="bucket2" position="1.5 0 0" geometry="primitive: cylinder; radius: 0.6; height: 1.5" material="visible: false">
                     <a-cylinder class="bucket-shape" radius="0.5" height="1" color="#888888" material="side: double" open-ended="true"></a-cylinder>
                     <a-circle radius="0.5" color="#555" position="0 -0.5 0" rotation="-90 0 0"></a-circle>
                     <a-text class="box-text" value="Opt 3" position="0 1.2 0" align="center" width="4" color="white" look-at="[camera]"></a-text>
                     
                     <a-entity class="water-stream" visible="false">
-                        <a-sphere radius="0.1" color="#00BFFF" position="0 0 0"></a-sphere>
-                        <a-sphere radius="0.1" color="#00BFFF" position="0 0.3 0"></a-sphere>
-                        <a-sphere radius="0.1" color="#00BFFF" position="0 0.6 0"></a-sphere>
+                        <a-sphere radius="0.15" color="#00BFFF" position="0 0 0" opacity="0.8"></a-sphere>
+                        <a-sphere radius="0.15" color="#00BFFF" position="0 0.4 0.4" opacity="0.8"></a-sphere>
+                        <a-sphere radius="0.15" color="#00BFFF" position="0 0.8 0.8" opacity="0.8"></a-sphere>
+                        <a-sphere radius="0.15" color="#00BFFF" position="0 1.2 1.2" opacity="0.8"></a-sphere>
                     </a-entity>
                     
                     <a-text class="confetti" value="🎉" position="0 0 0" scale="4 4 4" align="center" visible="false" look-at="[camera]"></a-text>
@@ -146,11 +153,34 @@
     </a-scene>
 
     <script>
-        // Sound engine
         let audioCtx;
         function initAudio() {
             if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         }
+
+        // New Hose Spray Sound Engine
+        function playHoseSound(duration) {
+            if(!audioCtx) return;
+            const bufferSize = audioCtx.sampleRate * duration;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.random() * 2 - 1; // Creates white noise
+            }
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = buffer;
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass'; // Muffles it to sound like water pressure
+            filter.frequency.value = 600; 
+            const gain = audioCtx.createGain();
+            gain.gain.setValueAtTime(1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+            noise.connect(filter);
+            filter.connect(gain);
+            gain.connect(audioCtx.destination);
+            noise.start();
+        }
+
         function playTone(freq, type, duration) {
             if(!audioCtx) return;
             const osc = audioCtx.createOscillator();
@@ -162,7 +192,6 @@
             gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
             setTimeout(() => osc.stop(), duration * 1000);
         }
-        function playSplash() { playTone(400, 'sine', 0.3); }
         function playDing() { playTone(800, 'sine', 0.1); setTimeout(() => playTone(1200, 'sine', 0.3), 100); }
         function playBuzzer() { playTone(150, 'sawtooth', 0.4); }
 
@@ -182,7 +211,8 @@
         const questionText = document.querySelector('#question-text');
         
         const shootBtn = document.querySelector('#shoot-btn');
-        const aimRing = document.querySelector('#aim-ring');
+        const fireHoseVisual = document.querySelector('#fire-hose-visual');
+        const aimRaycaster = document.querySelector('#aim-raycaster');
 
         const shapes = document.querySelectorAll('.bucket-shape');
         const texts = document.querySelectorAll('.box-text');
@@ -221,30 +251,37 @@
                 sadFaces[i].setAttribute('visible', 'false');
                 sadFaces[i].removeAttribute('animation');
                 streams[i].setAttribute('visible', 'false');
+                streams[i].removeAttribute('animation__pos');
+                streams[i].removeAttribute('animation__scale');
             });
         }
 
         shootBtn.addEventListener('click', () => {
             if (isWaiting) return;
             
-            const hits = aimRing.components.raycaster.intersectedEls;
+            const hits = aimRaycaster.components.raycaster.intersectedEls;
             
-            // FIXED: If you miss the bucket, the button still plays a sound so you know it works
+            // Physical recoil animation on the 2D hose UI
+            fireHoseVisual.classList.add('hose-firing');
+            setTimeout(() => fireHoseVisual.classList.remove('hose-firing'), 150);
+
+            // If user misses, just spray water briefly
             if (hits.length === 0) {
-                playSplash();
+                playHoseSound(0.2); 
                 return; 
             }
             
             isWaiting = true;
-            playSplash();
+            playHoseSound(0.5); // Full water spray sound
             
             const targetBucket = hits[0];
             const index = parseInt(targetBucket.id.replace('bucket', ''));
 
-            // Shoot animation
+            // 3D Water shoots from the camera's general direction into the bucket
             const stream = streams[index];
             stream.setAttribute('visible', 'true');
-            stream.setAttribute('animation', 'property: position; from: 0 -4 4; to: 0 0 0; dur: 400; easing: easeInQuad');
+            stream.setAttribute('animation__pos', 'property: position; from: 0 0 5; to: 0 0 0; dur: 400; easing: linear');
+            stream.setAttribute('animation__scale', 'property: scale; from: 0.1 0.1 0.1; to: 1 1 1; dur: 400; easing: easeOutQuad');
 
             setTimeout(() => {
                 stream.setAttribute('visible', 'false');
