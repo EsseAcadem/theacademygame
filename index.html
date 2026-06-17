@@ -212,6 +212,154 @@
             0%, 100% { transform: scale(0.86); opacity: 0.56; }
             50% { transform: scale(1.18); opacity: 0.96; }
         }
+
+
+        .scoreboard-card {
+            text-align: left;
+        }
+        .score-main {
+            text-align: center;
+            margin-bottom: 14px;
+        }
+        .score-main h3 {
+            margin: 0;
+            font-size: 22px;
+            color: #005EB8;
+        }
+        .score-main p {
+            margin: 8px 0 0 0;
+            font-weight: 700;
+            color: #111;
+        }
+        .score-entry {
+            display: grid;
+            gap: 8px;
+            margin: 14px 0;
+        }
+        #player-name-input {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 14px 14px;
+            border-radius: 14px;
+            border: 2px solid rgba(0, 94, 184, 0.22);
+            font-size: 16px;
+            font-family: inherit;
+            outline: none;
+            background: rgba(255,255,255,0.94);
+        }
+        #player-name-input:focus {
+            border-color: #005EB8;
+        }
+        .score-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .score-actions button {
+            padding: 12px 10px;
+            border: none;
+            border-radius: 14px;
+            font-weight: 700;
+            font-size: 14px;
+            font-family: inherit;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+        }
+        #save-score-btn {
+            background: #005EB8;
+            color: white;
+        }
+        #play-again-btn {
+            background: #FFB81C;
+            color: #111;
+        }
+        #save-score-btn:disabled {
+            opacity: 0.58;
+        }
+        .save-message {
+            min-height: 18px;
+            margin: 4px 0 0 0;
+            font-size: 13px;
+            color: #005EB8;
+            font-weight: 700;
+            text-align: center;
+        }
+        .leaderboard-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(0,0,0,0.10);
+        }
+        .leaderboard-title h4 {
+            margin: 0;
+            color: #111;
+            font-size: 15px;
+        }
+        .leaderboard-title span {
+            color: #555;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+        #scoreboard-list {
+            margin-top: 8px;
+            display: grid;
+            gap: 6px;
+        }
+        .score-row {
+            display: grid;
+            grid-template-columns: 30px 1fr auto;
+            gap: 8px;
+            align-items: center;
+            background: rgba(255,255,255,0.78);
+            border: 1px solid rgba(0,0,0,0.06);
+            border-radius: 12px;
+            padding: 8px 10px;
+            color: #111;
+        }
+        .score-rank {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 94, 184, 0.12);
+            color: #005EB8;
+            font-weight: 700;
+            font-size: 13px;
+        }
+        .score-name {
+            font-weight: 700;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .score-points {
+            font-weight: 700;
+            color: #005EB8;
+            white-space: nowrap;
+        }
+        .empty-scoreboard {
+            margin: 8px 0 0 0;
+            color: #555;
+            font-size: 14px;
+            text-align: center;
+            background: rgba(255,255,255,0.60);
+            border-radius: 12px;
+            padding: 10px;
+        }
+        @media (max-width: 380px) {
+            .score-actions {
+                grid-template-columns: 1fr;
+            }
+            .leaderboard-title {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+        }
     </style>
 </head>
 <body style="margin: 0; overflow: hidden;">
@@ -843,6 +991,146 @@
         window.addEventListener('touchend', stopSpray);
 
 
+
+        const SCOREBOARD_KEY = 'efm-day-water-game-scoreboard-v1';
+
+        function escapeHTML(value) {
+            return String(value).replace(/[&<>'"]/g, char => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                "'": '&#39;',
+                '"': '&quot;'
+            }[char]));
+        }
+
+        function getSavedScores() {
+            try {
+                const saved = JSON.parse(localStorage.getItem(SCOREBOARD_KEY) || '[]');
+                return Array.isArray(saved) ? saved : [];
+            } catch (error) {
+                return [];
+            }
+        }
+
+        function writeSavedScores(scores) {
+            try {
+                localStorage.setItem(SCOREBOARD_KEY, JSON.stringify(scores.slice(0, 10)));
+                return true;
+            } catch (error) {
+                return false;
+            }
+        }
+
+        function sortScores(scores) {
+            return scores.sort((a, b) => {
+                const aPercent = a.total ? a.score / a.total : 0;
+                const bPercent = b.total ? b.score / b.total : 0;
+                if (bPercent !== aPercent) return bPercent - aPercent;
+                if (b.score !== a.score) return b.score - a.score;
+                return new Date(b.date || 0) - new Date(a.date || 0);
+            });
+        }
+
+        function renderScoreboard() {
+            const list = document.querySelector('#scoreboard-list');
+            if (!list) return;
+
+            const scores = sortScores(getSavedScores()).slice(0, 10);
+            if (!scores.length) {
+                list.innerHTML = '<p class="empty-scoreboard">No names yet. Be the first on the board!</p>';
+                return;
+            }
+
+            list.innerHTML = scores.map((item, index) => `
+                <div class="score-row">
+                    <span class="score-rank">${index + 1}</span>
+                    <span class="score-name">${escapeHTML(item.name || 'Player')}</span>
+                    <span class="score-points">${Number(item.score) || 0}/${Number(item.total) || quizData.length}</span>
+                </div>
+            `).join('');
+        }
+
+        function saveScoreFromInput() {
+            const input = document.querySelector('#player-name-input');
+            const saveButton = document.querySelector('#save-score-btn');
+            const message = document.querySelector('#score-save-message');
+            if (!input || !saveButton || saveButton.disabled) return;
+
+            const cleanName = (input.value || 'Player')
+                .trim()
+                .replace(/\s+/g, ' ')
+                .slice(0, 24) || 'Player';
+
+            const scores = getSavedScores();
+            scores.push({
+                name: cleanName,
+                score: score,
+                total: quizData.length,
+                date: new Date().toISOString()
+            });
+
+            const saved = writeSavedScores(sortScores(scores));
+            input.value = cleanName;
+            input.disabled = true;
+            saveButton.disabled = true;
+            saveButton.innerText = 'Saved';
+            if (message) message.innerText = saved ? 'Score saved on this device.' : 'Score shown, but this browser could not save it.';
+            renderScoreboard();
+        }
+
+        function showEndScreen() {
+            stopSprayMobileSafe();
+            markerHint.style.display = 'none';
+            arcadeControls.style.display = 'none';
+            gameBoard.setAttribute('visible', 'false');
+            gameBoard.object3D.visible = false;
+            quizUI.style.display = 'block';
+            quizUI.innerHTML = `
+                <div class="scoreboard-card">
+                    <div class="score-main">
+                        <h3>Game Over!</h3>
+                        <p>Your score: ${score} / ${quizData.length}</p>
+                    </div>
+                    <div class="score-entry">
+                        <input id="player-name-input" type="text" maxlength="24" autocomplete="off" autocapitalize="words" placeholder="Enter your name" aria-label="Enter your name">
+                        <div class="score-actions">
+                            <button id="save-score-btn" type="button">Save Score</button>
+                            <button id="play-again-btn" type="button">Play Again</button>
+                        </div>
+                        <p id="score-save-message" class="save-message"></p>
+                    </div>
+                    <div class="leaderboard-title">
+                        <h4>Score board</h4>
+                        <span>Top 10 on this device</span>
+                    </div>
+                    <div id="scoreboard-list"></div>
+                </div>
+            `;
+
+            renderScoreboard();
+
+            const input = document.querySelector('#player-name-input');
+            const saveButton = document.querySelector('#save-score-btn');
+            const playAgainButton = document.querySelector('#play-again-btn');
+
+            if (saveButton) saveButton.addEventListener('click', saveScoreFromInput);
+            if (input) {
+                input.addEventListener('keydown', event => {
+                    if (event.key === 'Enter') {
+                        event.preventDefault();
+                        saveScoreFromInput();
+                    }
+                });
+                setTimeout(() => input.focus(), 120);
+            }
+            if (playAgainButton) {
+                playAgainButton.addEventListener('click', () => {
+                    window.location.reload();
+                });
+            }
+        }
+
         function processAnswer(targetBucket) {
             isWaiting = true;
             stopSprayMobileSafe();
@@ -871,11 +1159,7 @@
                 if (currentQ < quizData.length) {
                     loadQuestion();
                 } else {
-                    quizUI.innerHTML = `<h3 style="margin: 0; font-size: 18px; color: #005EB8;">Game Over!</h3><p style="margin: 10px 0 0 0; font-weight: bold;">Your score: ${score} / ${quizData.length}</p>`;
-                    quizUI.style.display = 'block';
-                    markerHint.style.display = 'none';
-                    arcadeControls.style.display = 'none';
-                    gameBoard.setAttribute('visible', 'false');
+                    showEndScreen();
                 }
             }, 2500); 
         }
