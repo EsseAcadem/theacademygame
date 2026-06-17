@@ -20,8 +20,9 @@
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: linear-gradient(135deg, #005EB8, #00A9CE);
             display: flex; flex-direction: column; justify-content: center; align-items: center; 
-            z-index: 9999; color: white; text-align: center; padding: 20px; box-sizing: border-box;
+            z-index: 2147483647 !important; color: white; text-align: center; padding: 20px; box-sizing: border-box;
             touch-action: none; /* Forces mobile to treat this as a solid tap area */
+            pointer-events: auto !important;
         }
         #academy-logo {
             width: min(245px, 74vw);
@@ -86,8 +87,25 @@
             line-height: 1.3;
             font-size: 15px;
         }
-        .arjs-loader, .a-loader-title, .a-enter-vr, .a-enter-ar, .a-dialog {
+        /* Keep generated AR/A-Frame helper layers behind the splash screen.
+           This removes only the start-up blocker, not the in-game marker/bucket UI. */
+        a-scene, .a-canvas, canvas.a-canvas {
+            z-index: 1 !important;
+        }
+        canvas.a-canvas {
+            pointer-events: none !important;
+        }
+        #start-btn, #start-screen * {
+            pointer-events: auto !important;
+        }
+        .arjs-loader, .arjs-loader-spinner, .a-loader-title, .a-enter-vr, .a-enter-ar,
+        .a-dialog, .a-modal, .a-orientation-modal, #arjsDebugUIContainer,
+        #camera-overlay, #camera-permission-overlay, #camera-permission, #permission-overlay,
+        .camera-overlay, .camera-permission-overlay, .permission-overlay {
             display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
         }
         #start-btn {
             padding: 16px 40px; font-size: 18px; background: white; color: #005EB8;
@@ -465,6 +483,44 @@
     </a-scene>
 
     <script>
+        let startupOverlayObserver = null;
+
+        function removeStartupBlockingOverlay() {
+            const selectors = [
+                '.arjs-loader', '.arjs-loader-spinner', '.a-loader-title', '.a-enter-vr', '.a-enter-ar',
+                '.a-dialog', '.a-modal', '.a-orientation-modal', '#arjsDebugUIContainer',
+                '#camera-overlay', '#camera-permission-overlay', '#camera-permission', '#permission-overlay',
+                '.camera-overlay', '.camera-permission-overlay', '.permission-overlay'
+            ];
+
+            document.querySelectorAll(selectors.join(',')).forEach(el => {
+                if (!el || el.id === 'start-screen' || el.closest('#start-screen')) return;
+                if (el.dataset.startupOverlayHidden === 'true') return;
+
+                el.dataset.startupOverlayHidden = 'true';
+                el.style.setProperty('display', 'none', 'important');
+                el.style.setProperty('visibility', 'hidden', 'important');
+                el.style.setProperty('opacity', '0', 'important');
+                el.style.setProperty('pointer-events', 'none', 'important');
+            });
+
+            const startScreen = document.querySelector('#start-screen');
+            if (startScreen && startScreen.style.display !== 'none') {
+                startScreen.style.setProperty('z-index', '2147483647', 'important');
+                startScreen.style.setProperty('pointer-events', 'auto', 'important');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            removeStartupBlockingOverlay();
+            startupOverlayObserver = new MutationObserver(removeStartupBlockingOverlay);
+            startupOverlayObserver.observe(document.body, { childList: true, subtree: true });
+            setTimeout(removeStartupBlockingOverlay, 250);
+            setTimeout(removeStartupBlockingOverlay, 900);
+            setTimeout(removeStartupBlockingOverlay, 1800);
+        });
+        window.addEventListener('load', removeStartupBlockingOverlay);
+
         let audioCtx;
         let hoseNoiseNode, hoseGainNode;
         let hoseFilterNodes = [];
@@ -815,6 +871,7 @@
         function runStartSequence(e) {
             if(e) e.preventDefault();
             if(hasStarted) return;
+            if (startupOverlayObserver) startupOverlayObserver.disconnect();
             hasStarted = true;
             currentQ = 0;
             score = 0;
