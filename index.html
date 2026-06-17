@@ -20,8 +20,9 @@
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: linear-gradient(135deg, #005EB8, #00A9CE);
             display: flex; flex-direction: column; justify-content: center; align-items: center; 
-            z-index: 9999; color: white; text-align: center; padding: 20px; box-sizing: border-box;
+            z-index: 2147483647 !important; color: white; text-align: center; padding: 20px; box-sizing: border-box;
             touch-action: none; /* Forces mobile to treat this as a solid tap area */
+            pointer-events: auto !important;
         }
         #academy-logo {
             width: min(245px, 74vw);
@@ -86,43 +87,25 @@
             line-height: 1.3;
             font-size: 15px;
         }
-        .arjs-loader, .a-loader-title, .a-enter-vr, .a-enter-ar, .a-dialog {
-            display: none !important;
+        /* Keep generated AR/A-Frame helper layers behind the splash screen.
+           This removes only the start-up blocker, not the in-game marker/bucket UI. */
+        a-scene, .a-canvas, canvas.a-canvas {
+            z-index: 1 !important;
         }
-
-        /*
-           Start-up overlay fix.
-           This does NOT touch #marker-hint, #quiz-ui, buckets, marker logic, or the game board.
-           It only stops the old camera/compliance/backdrop layer from sitting above the splash screen.
-        */
-        body.splash-active #start-screen {
-            z-index: 2147483647 !important;
+        canvas.a-canvas {
+            pointer-events: none !important;
+        }
+        #start-btn, #start-screen * {
             pointer-events: auto !important;
         }
-        body.splash-active a-scene,
-        body.splash-active .a-canvas,
-        body.splash-active #arjs-video {
-            z-index: 1 !important;
-            pointer-events: none !important;
-        }
-        body.splash-active #camera-overlay,
-        body.splash-active .camera-overlay,
-        body.splash-active #camera-permission-overlay,
-        body.splash-active .camera-permission-overlay,
-        body.splash-active #camera-compliance-overlay,
-        body.splash-active .camera-compliance-overlay,
-        body.splash-active #compliance-overlay,
-        body.splash-active .compliance-overlay,
-        body.splash-active #permission-overlay,
-        body.splash-active .permission-overlay,
-        body.splash-active #privacy-overlay,
-        body.splash-active .privacy-overlay,
-        body.splash-active .modal-backdrop,
-        body.splash-active .overlay-backdrop {
+        .arjs-loader, .arjs-loader-spinner, .a-loader-title, .a-enter-vr, .a-enter-ar,
+        .a-dialog, .a-modal, .a-orientation-modal, #arjsDebugUIContainer,
+        #camera-overlay, #camera-permission-overlay, #camera-permission, #permission-overlay,
+        .camera-overlay, .camera-permission-overlay, .permission-overlay {
             display: none !important;
-            pointer-events: none !important;
             visibility: hidden !important;
             opacity: 0 !important;
+            pointer-events: none !important;
         }
         #start-btn {
             padding: 16px 40px; font-size: 18px; background: white; color: #005EB8;
@@ -397,7 +380,7 @@
         }
     </style>
 </head>
-<body class="splash-active" style="margin: 0; overflow: hidden;">
+<body style="margin: 0; overflow: hidden;">
 
     <div id="start-screen">
         <img id="academy-logo" src="https://raw.githubusercontent.com/EsseAcadem/theacademygame/668e6854f8df8913447aac80b8d5d5b403ed228d/shade_1.png" alt="Essentia Academy logo">
@@ -500,87 +483,43 @@
     </a-scene>
 
     <script>
-        /*
-           Removes the empty black/translucent start-up blocker left behind
-           by the old camera/compliance message. Protected game UI is excluded.
-        */
-        (function removeEmptyStartupOverlay() {
-            const protectedIds = new Set([
-                'start-screen',
-                'marker-hint',
-                'quiz-ui',
-                'arcade-controls',
-                'fire-hose-visual',
-                'shoot-btn'
-            ]);
+        let startupOverlayObserver = null;
 
-            const blockerWords = [
-                'camera',
-                'permission',
-                'compliance',
-                'consent',
-                'privacy',
-                'overlay',
-                'backdrop'
+        function removeStartupBlockingOverlay() {
+            const selectors = [
+                '.arjs-loader', '.arjs-loader-spinner', '.a-loader-title', '.a-enter-vr', '.a-enter-ar',
+                '.a-dialog', '.a-modal', '.a-orientation-modal', '#arjsDebugUIContainer',
+                '#camera-overlay', '#camera-permission-overlay', '#camera-permission', '#permission-overlay',
+                '.camera-overlay', '.camera-permission-overlay', '.permission-overlay'
             ];
 
-            function isProtectedElement(el) {
-                return !el || protectedIds.has(el.id) || el.closest('#start-screen') || el.closest('#marker-hint') || el.closest('#quiz-ui') || el.closest('#arcade-controls');
-            }
+            document.querySelectorAll(selectors.join(',')).forEach(el => {
+                if (!el || el.id === 'start-screen' || el.closest('#start-screen')) return;
+                if (el.dataset.startupOverlayHidden === 'true') return;
 
-            function elementName(el) {
-                return `${el.id || ''} ${el.className || ''} ${el.getAttribute('aria-label') || ''}`.toLowerCase();
-            }
-
-            function hideIfStartupBlocker(el) {
-                if (isProtectedElement(el)) return;
-
-                const style = window.getComputedStyle(el);
-                const rect = el.getBoundingClientRect();
-                const name = elementName(el);
-                const isFixedLayer = style.position === 'fixed' || style.position === 'absolute';
-                const isLargeLayer = rect.width >= window.innerWidth * 0.75 && rect.height >= window.innerHeight * 0.75;
-                const zIndex = Number.parseInt(style.zIndex, 10);
-                const hasHighZIndex = Number.isFinite(zIndex) && zIndex >= 50;
-                const nameLooksLikeBlocker = blockerWords.some(word => name.includes(word));
-                const hasUsefulContent = Boolean(
-                    (el.innerText || '').trim() ||
-                    el.querySelector('button, input, textarea, select, a, img, svg')
-                );
-
-                if (isFixedLayer && isLargeLayer && (hasHighZIndex || nameLooksLikeBlocker) && (!hasUsefulContent || nameLooksLikeBlocker)) {
-                    el.style.setProperty('display', 'none', 'important');
-                    el.style.setProperty('visibility', 'hidden', 'important');
-                    el.style.setProperty('opacity', '0', 'important');
-                    el.style.setProperty('pointer-events', 'none', 'important');
-                    el.setAttribute('aria-hidden', 'true');
-                }
-            }
-
-            function cleanStartupOverlays() {
-                if (!document.body || !document.body.classList.contains('splash-active')) return;
-
-                const startScreen = document.querySelector('#start-screen');
-                if (startScreen) {
-                    startScreen.style.setProperty('z-index', '2147483647', 'important');
-                    startScreen.style.setProperty('pointer-events', 'auto', 'important');
-                }
-
-                document.querySelectorAll('body > div, body > section, body > aside').forEach(hideIfStartupBlocker);
-            }
-
-            document.addEventListener('DOMContentLoaded', () => {
-                cleanStartupOverlays();
-                const observer = new MutationObserver(cleanStartupOverlays);
-                observer.observe(document.body, { childList: true });
-
-                [50, 150, 400, 900, 1500].forEach(delay => {
-                    window.setTimeout(cleanStartupOverlays, delay);
-                });
+                el.dataset.startupOverlayHidden = 'true';
+                el.style.setProperty('display', 'none', 'important');
+                el.style.setProperty('visibility', 'hidden', 'important');
+                el.style.setProperty('opacity', '0', 'important');
+                el.style.setProperty('pointer-events', 'none', 'important');
             });
 
-            window.addEventListener('load', cleanStartupOverlays);
-        })();
+            const startScreen = document.querySelector('#start-screen');
+            if (startScreen && startScreen.style.display !== 'none') {
+                startScreen.style.setProperty('z-index', '2147483647', 'important');
+                startScreen.style.setProperty('pointer-events', 'auto', 'important');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            removeStartupBlockingOverlay();
+            startupOverlayObserver = new MutationObserver(removeStartupBlockingOverlay);
+            startupOverlayObserver.observe(document.body, { childList: true, subtree: true });
+            setTimeout(removeStartupBlockingOverlay, 250);
+            setTimeout(removeStartupBlockingOverlay, 900);
+            setTimeout(removeStartupBlockingOverlay, 1800);
+        });
+        window.addEventListener('load', removeStartupBlockingOverlay);
 
         let audioCtx;
         let hoseNoiseNode, hoseGainNode;
@@ -932,8 +871,8 @@
         function runStartSequence(e) {
             if(e) e.preventDefault();
             if(hasStarted) return;
+            if (startupOverlayObserver) startupOverlayObserver.disconnect();
             hasStarted = true;
-            document.body.classList.remove('splash-active');
             currentQ = 0;
             score = 0;
             questionHasLoaded = false;
